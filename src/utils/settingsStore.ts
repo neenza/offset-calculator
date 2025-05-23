@@ -3,9 +3,9 @@ import { PAPER_TYPES, BINDING_OPTIONS } from '@/data/printingOptions';
 import { PaperType, BindingOption } from '@/models/PrintingJob';
 
 interface SettingsStore {
-  paperTypes: PaperType[];
+  paperTypes: PaperType[];  // Keeping for backward compatibility
   bindingOptions: BindingOption[];
-  setPaperTypes: (types: PaperType[]) => void;
+  setPaperTypes: (types: PaperType[]) => void;  // Keeping for backward compatibility
   setBindingOptions: (options: BindingOption[]) => void;
   loadSettings: () => void;
   saveSettings: () => void;
@@ -23,7 +23,7 @@ const loadFromStorage = <T>(key: string, defaultValue: T): T => {
 };
 
 export const useSettingsStore = create<SettingsStore>((set, get) => ({
-  paperTypes: loadFromStorage('paperTypes', PAPER_TYPES),
+  paperTypes: PAPER_TYPES, // We no longer load this from storage
   bindingOptions: loadFromStorage('bindingOptions', BINDING_OPTIONS),
 
   setPaperTypes: (types) => set({ paperTypes: types }),
@@ -31,16 +31,15 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
 
   loadSettings: () => {
     set({
-      paperTypes: loadFromStorage('paperTypes', PAPER_TYPES),
+      paperTypes: PAPER_TYPES, // Always use default paper types
       bindingOptions: loadFromStorage('bindingOptions', BINDING_OPTIONS),
     });
   },
 
   saveSettings: () => {
-    const { paperTypes, bindingOptions } = get();
-    localStorage.setItem('paperTypes', JSON.stringify(paperTypes));
+    const { bindingOptions } = get();
     localStorage.setItem('bindingOptions', JSON.stringify(bindingOptions));
-    console.log('Settings saved:', { paperTypes, bindingOptions });
+    console.log('Settings saved:', { bindingOptions });
   },
   
   resetSettings: () => {

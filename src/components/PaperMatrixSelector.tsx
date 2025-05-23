@@ -21,6 +21,7 @@ const PaperMatrixSelector: React.FC<PaperMatrixSelectorProps> = ({
   onCostPerKgChange
 }) => {
   const [matrixValues, setMatrixValues] = useState<{[key: string]: number}>({});
+  const [highlightedCell, setHighlightedCell] = useState<string | null>(null);
   
   // Filter out 'custom' size for the matrix
   const relevantSizes = SHEET_SIZES.filter(size => size.id !== 'custom');
@@ -43,11 +44,23 @@ const PaperMatrixSelector: React.FC<PaperMatrixSelectorProps> = ({
     
     setMatrixValues(newValues);
   }, [costPerKg]);
+    // Update highlighted cell when props change
+  useEffect(() => {
+    if (selectedGsm && selectedSizeId) {
+      const key = `${selectedSizeId}-${selectedGsm}`;
+      setHighlightedCell(key);
+      console.log(`Matrix highlight updated to: ${key} (size: ${selectedSizeId}, gsm: ${selectedGsm})`);
+    } else {
+      setHighlightedCell(null);
+    }
+  }, [selectedGsm, selectedSizeId]);
   
   const handleCellClick = (gsm: number, sizeId: string) => {
     const key = `${sizeId}-${gsm}`;
+    setHighlightedCell(key);
     const costPerSheet = matrixValues[key] || 0;
     onMatrixCellSelected(gsm, sizeId, costPerSheet);
+    console.log(`Matrix cell clicked: ${key} (cost: ${costPerSheet})`);
   };
   
   return (
@@ -84,11 +97,10 @@ const PaperMatrixSelector: React.FC<PaperMatrixSelectorProps> = ({
               <TableRow key={size.id}>
                 <TableCell className="font-medium whitespace-nowrap sticky left-0 z-10 bg-white shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                   {size.name}<br />
-                  <span className="text-xs text-gray-500">{size.description}</span>                </TableCell>
-                {GSM_OPTIONS.map(gsm => {
+                  <span className="text-xs text-gray-500">{size.description}</span>                </TableCell>                {GSM_OPTIONS.map(gsm => {
                   const key = `${size.id}-${gsm}`;
                   const cost = matrixValues[key] || 0;
-                  const isSelected = selectedGsm === gsm && selectedSizeId === size.id;
+                  const isSelected = highlightedCell === key;
                   
                   return (
                     <TableCell 

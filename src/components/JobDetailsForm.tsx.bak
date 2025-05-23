@@ -46,16 +46,17 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange }) => 
   const [sheetSizeKey, setSheetSizeKey] = useState<number>(0);
 
   const { paperTypes, bindingOptions } = useSettingsStore();
+
   // Force re-render of dropdowns when job values change from matrix
   useEffect(() => {
     // When paperTypeId changes externally (via matrix), increment key to force Select component refresh
     setPaperTypeKey(prev => prev + 1);
-  }, [job.paperTypeId, job.paperGsm]);
+  }, [job.paperTypeId]);
 
   useEffect(() => {
     // When sheetSizeId changes externally (via matrix), increment key to force Select component refresh
     setSheetSizeKey(prev => prev + 1);
-  }, [job.sheetSizeId, job.paperSizeId]);
+  }, [job.sheetSizeId]);
 
   const handleInputChange = (field: keyof PrintingJob, value: any) => {
     // Only update if value has actually changed
@@ -223,7 +224,8 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange }) => 
                       onChange={(e) => handleNumberInputChange('customSheetHeight', e.target.value)}
                     />
                   </div>
-                </div>              )}              <div className="space-y-2">
+                </div>
+              )}              <div className="space-y-2">
                 <label htmlFor="paperType" className="text-sm font-medium">Paper Type</label>                <Select 
                   key={`paper-type-${paperTypeKey}`}
                   value={job.paperTypeId || ""}
@@ -248,6 +250,15 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange }) => 
                         handleInputChange('paperTypeId', value);
                       }
                     } else {
+                      handleInputChange('paperTypeId', value);
+                    }
+                  }}
+                          ...job,
+                          ...updates
+                        });
+                      }
+                    } else {
+                      // Handle category selection (e.g., "uncoated" without GSM)
                       handleInputChange('paperTypeId', value);
                     }
                   }}
@@ -276,7 +287,8 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange }) => 
                 <h3 className="text-sm font-medium mb-2">Paper Cost Matrix</h3>                <PaperMatrixSelector 
                   selectedGsm={job.paperGsm}
                   selectedSizeId={job.paperSizeId}
-                  costPerKg={job.paperCostPerKg}                  onMatrixCellSelected={(gsm, sizeId, costPerSheet) => {
+                  costPerKg={job.paperCostPerKg}
+                  onMatrixCellSelected={(gsm, sizeId, costPerSheet) => {
                     // Create a batch of updates to ensure all changes are applied together
                     const updates: Partial<PrintingJob> = {};
                     
@@ -286,7 +298,8 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange }) => 
                     
                     // Also update the sheet size dropdown to match
                     updates.sheetSizeId = sizeId;
-                      // Update the paper type based on the GSM selection
+                    
+                    // Update the paper type based on the GSM selection
                     // Find the most appropriate paper type based on selection
                     let paperType = 'coated-gloss';
                     if (job.paperTypeId) {

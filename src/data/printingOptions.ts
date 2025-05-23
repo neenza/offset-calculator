@@ -1,48 +1,31 @@
 import { PaperType, SheetSize, BindingOption } from "../models/PrintingJob";
+import { GSM_OPTIONS } from "./paperMatrix";
 
+// Generate paper types from all GSM values in the matrix
 export const PAPER_TYPES: PaperType[] = [
-  {
-    id: "uncoated-80",
-    name: "Uncoated 80gsm",
-    description: "Standard uncoated paper suitable for everyday printing",
-    costPerSheet: 3.00
-  },
-  {
-    id: "uncoated-100",
-    name: "Uncoated 100gsm",
-    description: "Medium weight uncoated paper with better opacity",
-    costPerSheet: 4.00
-  },
-  {
-    id: "coated-matt-130",
-    name: "Coated Matt 130gsm",
-    description: "Professional matt coated paper for brochures and flyers",
-    costPerSheet: 5.00
-  },
-  {
-    id: "coated-gloss-150",
-    name: "Coated Gloss 150gsm",
-    description: "Glossy paper ideal for vibrant color reproduction",
-    costPerSheet: 6.00
-  },
-  {
-    id: "coated-gloss-250",
-    name: "Coated Gloss 250gsm",
-    description: "Heavy glossy paper for premium brochures and covers",
-    costPerSheet: 9.00
-  },
-  {
-    id: "cardstock-300",
-    name: "Cardstock 300gsm",
-    description: "Thick cardstock for business cards and postcards",
-    costPerSheet: 12.00
-  },
-  {
-    id: "cardstock-350",
-    name: "Cardstock 350gsm",
-    description: "Premium thick cardstock for luxury print items",
-    costPerSheet: 15.00
-  }
+  // Uncoated paper types
+  ...GSM_OPTIONS.map(gsm => ({
+    id: `uncoated-${gsm}`,
+    name: `Uncoated ${gsm}gsm`,
+    description: `Standard uncoated paper ${gsm}gsm suitable for general printing`,
+    costPerSheet: 0 // Cost is now calculated by the matrix
+  })),
+  
+  // Coated matt paper types
+  ...GSM_OPTIONS.map(gsm => ({
+    id: `coated-matt-${gsm}`,
+    name: `Coated Matt ${gsm}gsm`,
+    description: `Professional matt coated paper ${gsm}gsm for brochures and flyers`,
+    costPerSheet: 0 // Cost is now calculated by the matrix
+  })),
+  
+  // Coated gloss paper types
+  ...GSM_OPTIONS.map(gsm => ({
+    id: `coated-gloss-${gsm}`,
+    name: `Coated Gloss ${gsm}gsm`,
+    description: `Glossy paper ${gsm}gsm ideal for vibrant color reproduction`,
+    costPerSheet: 0 // Cost is now calculated by the matrix
+  }))
 ];
 
 export const SHEET_SIZES: SheetSize[] = [

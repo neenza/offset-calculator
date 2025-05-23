@@ -22,9 +22,7 @@ const Settings = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { 
-    paperTypes, 
     bindingOptions, 
-    setPaperTypes, 
     setBindingOptions,
     saveSettings,
     resetSettings,
@@ -36,14 +34,6 @@ const Settings = () => {
     loadSettings();
   }, [loadSettings]);
 
-  const handlePaperCostChange = (paperId: string, newCost: string) => {
-    const cost = parseFloat(newCost) || 0;
-    console.log(`Updating paper ${paperId} cost to: ${cost}`);
-    setPaperTypes(paperTypes.map(paper => 
-      paper.id === paperId ? { ...paper, costPerSheet: cost } : paper
-    ));
-  };
-
   const handleBindingCostChange = (bindingId: string, field: 'baseCost' | 'perUnitCost', newCost: string) => {
     const cost = parseFloat(newCost) || 0;
     console.log(`Updating binding ${bindingId} ${field} to: ${cost}`);
@@ -54,7 +44,7 @@ const Settings = () => {
 
   const handleSave = () => {
     saveSettings();
-    console.log("Saved settings:", { paperTypes, bindingOptions });
+    console.log("Saved settings:", { bindingOptions });
     toast({
       title: "Settings Saved",
       description: "Your cost settings have been saved successfully.",
@@ -68,7 +58,6 @@ const Settings = () => {
       description: "Your cost settings have been reset to defaults.",
     });
   };
-
   return (
     <div className="container mx-auto px-4 py-6">
       <div className="flex items-center justify-between mb-6">
@@ -98,44 +87,6 @@ const Settings = () => {
       </div>
 
       <div className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Paper Types</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Accordion type="multiple" defaultValue={paperTypes.map(p => p.id)}>
-              {paperTypes.map(paper => (
-                <AccordionItem key={paper.id} value={paper.id}>
-                  <AccordionTrigger className="hover:no-underline">
-                    <div className="flex items-center justify-between w-full pr-4">
-                      <span>{paper.name}</span>
-                      <span className="text-sm text-gray-500">₹{paper.costPerSheet} per sheet</span>
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <div className="space-y-4">
-                      <div>
-                        <p className="text-sm text-gray-500 mb-2">{paper.description}</p>
-                        <div className="flex items-center gap-2">
-                          <label className="text-sm whitespace-nowrap">Cost per Sheet (₹):</label>
-                          <Input 
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={paper.costPerSheet}
-                            onChange={(e) => handlePaperCostChange(paper.id, e.target.value)}
-                            className="max-w-[200px]"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
-          </CardContent>
-        </Card>
-
         <Card>
           <CardHeader>
             <CardTitle>Binding Options</CardTitle>
