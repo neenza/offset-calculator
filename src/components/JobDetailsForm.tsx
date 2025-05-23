@@ -154,9 +154,7 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange }) => 
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
-
-              {job.sheetSizeId === 'custom' && (
+              </div>              {job.sheetSizeId === 'custom' && (
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label htmlFor="customWidth" className="text-sm font-medium">Width (mm)</label>
@@ -178,17 +176,7 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange }) => 
                   </div>
                 </div>
               )}
-            </div>
-          </AccordionContent>
-        </AccordionItem>
 
-        {/* Paper Selection */}
-        <AccordionItem value="paper-selection" className="mb-2">
-          <AccordionTrigger className="bg-gray-200 hover:bg-gray-300 rounded-t-md px-4 py-2 text-print-blue font-medium transition-colors">
-            Paper Selection
-          </AccordionTrigger>
-          <AccordionContent className="bg-gray-100 p-4 border border-gray-200 rounded-b-md shadow-inner">
-            <div className="space-y-4">
               <div className="space-y-2">
                 <label htmlFor="paperType" className="text-sm font-medium">Paper Type</label>
                 <Select 
