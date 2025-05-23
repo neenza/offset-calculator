@@ -9,10 +9,12 @@ interface PaperMatrixSelectorProps {
   selectedGsm: number | undefined;
   selectedSizeId: string | undefined;
   costPerKg: number | undefined;
-  gsmPriceMode: 'flat' | 'slope';
+  gsmPriceMode: 'flat' | 'slope' | 'custom';
   paperCostIncreasePerGsm: number | undefined;
+  customCostMatrix?: {[key: string]: number};
   onMatrixCellSelected: (gsm: number, sizeId: string, costPerSheet: number) => void;
   onCostPerKgChange: (value: number) => void;
+  onCustomCostChange?: (gsm: string, value: number) => void;
 }
 
 const PaperMatrixSelector: React.FC<PaperMatrixSelectorProps> = ({
@@ -21,8 +23,10 @@ const PaperMatrixSelector: React.FC<PaperMatrixSelectorProps> = ({
   costPerKg = 150,
   gsmPriceMode = 'flat',
   paperCostIncreasePerGsm = 0.5,
+  customCostMatrix = {},
   onMatrixCellSelected,
-  onCostPerKgChange
+  onCostPerKgChange,
+  onCustomCostChange
 }) => {
   const [matrixValues, setMatrixValues] = useState<{[key: string]: number}>({});
   const [highlightedCell, setHighlightedCell] = useState<string | null>(null);
@@ -43,13 +47,15 @@ const PaperMatrixSelector: React.FC<PaperMatrixSelectorProps> = ({
           gsm,
           costPerKg || 150,
           gsmPriceMode,
-          paperCostIncreasePerGsm || 0.5
+          paperCostIncreasePerGsm || 0.5,
+          80, // baseGsm
+          customCostMatrix
         );
       });
     });
     
     setMatrixValues(newValues);
-  }, [costPerKg, gsmPriceMode, paperCostIncreasePerGsm]);
+  }, [costPerKg, gsmPriceMode, paperCostIncreasePerGsm, customCostMatrix]);
     // Update highlighted cell when props change
   useEffect(() => {
     if (selectedGsm && selectedSizeId) {
@@ -68,23 +74,63 @@ const PaperMatrixSelector: React.FC<PaperMatrixSelectorProps> = ({
     onMatrixCellSelected(gsm, sizeId, costPerSheet);
     console.log(`Matrix cell clicked: ${key} (cost: ${costPerSheet})`);
   };
-  
-  return (
-    <div className="space-y-4 mt-4">      <div className="bg-gray-200 p-2 rounded-md">
-        <div className="space-y-2">
-          <label htmlFor="costPerKg" className="text-sm font-medium">Cost per Kg (₹)</label>
-          <Input 
-            id="costPerKg"
-            type="number"
-            min="1"
-            step="1"
-            value={costPerKg || ""}
-            onChange={(e) => onCostPerKgChange(parseFloat(e.target.value) || 0)}
-            className="bg-white"
-          />
-          <p className="text-xs text-gray-600">Enter the paper cost per kilogram</p>
+    return (
+    <div className="space-y-4 mt-4">
+      {/* Base cost per kg input - shown in flat and slope modes */}
+      {(gsmPriceMode === 'flat' || gsmPriceMode === 'slope') && (
+        <div className="bg-gray-200 p-2 rounded-md">
+          <div className="space-y-2">
+            <label htmlFor="costPerKg" className="text-sm font-medium">
+              {gsmPriceMode === 'flat' ? "Cost per Kg (₹)" : "Base Cost per Kg (₹)"}
+            </label>
+            <Input 
+              id="costPerKg"
+              type="number"
+              min="1"
+              step="1"
+              value={costPerKg || ""}
+              onChange={(e) => onCostPerKgChange(parseFloat(e.target.value) || 0)}
+              className="bg-white"
+            />
+            <p className="text-xs text-gray-600">
+              {gsmPriceMode === 'flat' 
+                ? "Enter the paper cost per kilogram" 
+                : "Enter the base cost per kilogram (for 80 GSM)"}
+            </p>
+          </div>
         </div>
-      </div>
+      )}
+      
+      {/* Custom cost per GSM inputs - only shown in custom mode */}
+      {gsmPriceMode === 'custom' && (
+        <div className="bg-gray-200 p-2 rounded-md">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Custom Cost per Kg by GSM (₹)</label>
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 mt-2">
+              {GSM_OPTIONS.map(gsm => (
+                <div key={gsm} className="space-y-1">
+                  <label htmlFor={`custom-cost-${gsm}`} className="text-xs font-medium">{gsm} GSM</label>
+                  <Input
+                    id={`custom-cost-${gsm}`}
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={customCostMatrix[gsm.toString()] || ""}
+                    onChange={(e) => onCustomCostChange && onCustomCostChange(
+                      gsm.toString(),
+                      parseFloat(e.target.value) || 0
+                    )}
+                    className="bg-white text-sm h-8"
+                  />
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-gray-600 mt-2">
+              Enter the specific cost per kg for each GSM value
+            </p>
+          </div>
+        </div>
+      )}
       
       <div className="relative overflow-x-auto">
         <Table className="w-full">

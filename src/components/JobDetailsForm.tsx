@@ -320,7 +320,7 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange }) => 
                 <div className="space-y-3">
                   <RadioGroup
                     value={job.gsmPriceMode}
-                    onValueChange={(value: 'flat' | 'slope') => {
+                    onValueChange={(value: 'flat' | 'slope' | 'custom') => {
                       handleInputChange('gsmPriceMode', value);
                     }}
                     className="flex flex-col space-y-1"
@@ -340,6 +340,15 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange }) => 
                         Slope Pricing
                         <p className="text-xs text-gray-500 mt-0.5">
                           Cost increases with higher GSM values
+                        </p>
+                      </label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="custom" id="custom-pricing" />
+                      <label htmlFor="custom-pricing" className="text-sm font-medium">
+                        Custom Pricing
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          Set specific cost per kg for each GSM value
                         </p>
                       </label>
                     </div>
@@ -368,13 +377,24 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange }) => 
                     </div>
                   )}
                 </div>
-              </div>              {/* Paper Matrix Selector */}              <div className="mt-4 pt-4 border-t border-gray-200">                <h3 className="text-sm font-medium mb-2">Paper Cost Matrix</h3>
-                <PaperMatrixSelector 
+              </div>              {/* Paper Matrix Selector */}              <div className="mt-4 pt-4 border-t border-gray-200">                <h3 className="text-sm font-medium mb-2">Paper Cost Matrix</h3>                <PaperMatrixSelector 
                   selectedGsm={job.paperGsm}
                   selectedSizeId={job.paperSizeId}
                   costPerKg={job.paperCostPerKg}
                   gsmPriceMode={job.gsmPriceMode}
                   paperCostIncreasePerGsm={job.paperCostIncreasePerGsm}
+                  customCostMatrix={job.customCostMatrix}
+                  onCustomCostChange={(gsm, value) => {
+                    // Create a new customCostMatrix with the updated value
+                    const updatedMatrix = { 
+                      ...(job.customCostMatrix || {}), 
+                      [gsm]: value 
+                    };
+                    
+                    // Update the job with the new matrix
+                    handleInputChange('customCostMatrix', updatedMatrix);
+                    console.log(`Updated custom cost for ${gsm} GSM: ${value}`);
+                  }}
                   onMatrixCellSelected={(gsm, sizeId, costPerSheet) => {
                     // Create a batch of updates to ensure all changes are applied together
                     const updates: Partial<PrintingJob> = {};

@@ -23,20 +23,30 @@ export function calculateTotalCost(job: PrintingJob): CostBreakdown {
   
   // Get cost per sheet - either from the matrix calculation or from the paper type
   let costPerSheet = selectedPaper ? selectedPaper.costPerSheet : 0;
-  
-  // If we have matrix values, use those for a more accurate calculation
-  if (job.paperGsm && job.paperSizeId && job.paperCostPerKg) {
+    // If we have matrix values, use those for a more accurate calculation
+  if (job.paperGsm && job.paperSizeId) {
     const selectedSize = SHEET_SIZES.find(size => size.id === job.paperSizeId);
     if (selectedSize) {
-      costPerSheet = calculateCostPerSheet(
-        selectedSize.width,
-        selectedSize.height,
-        job.paperGsm,
-        job.paperCostPerKg,
-        job.gsmPriceMode,
-        job.paperCostIncreasePerGsm
+      // Make sure we have the required parameters based on the pricing mode
+      const hasValidParams = (
+        (job.gsmPriceMode === 'flat' && job.paperCostPerKg) ||
+        (job.gsmPriceMode === 'slope' && job.paperCostPerKg && job.paperCostIncreasePerGsm) ||
+        (job.gsmPriceMode === 'custom' && job.customCostMatrix)
       );
-      console.log(`Using matrix calculation: ${costPerSheet} per sheet (${job.gsmPriceMode} pricing)`);
+
+      if (hasValidParams) {
+        costPerSheet = calculateCostPerSheet(
+          selectedSize.width,
+          selectedSize.height,
+          job.paperGsm,
+          job.paperCostPerKg || 150, // Default if not provided
+          job.gsmPriceMode,
+          job.paperCostIncreasePerGsm,
+          80, // baseGsm
+          job.customCostMatrix
+        );
+        console.log(`Using matrix calculation: ${costPerSheet} per sheet (${job.gsmPriceMode} pricing)`);
+      }
     }
   }
   

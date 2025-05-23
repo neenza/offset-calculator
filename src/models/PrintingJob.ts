@@ -46,9 +46,12 @@ export interface PrintingJob {
   paperMaterialType: string; // Material type: uncoated, coated-matt, coated-gloss, cardstock
   paperGsm?: number;         // GSM value
   paperSizeId?: string;      // Size ID for matrix selection
-  gsmPriceMode: 'flat' | 'slope'; // GSM pricing mode: flat (same cost for all GSM) or slope (increasing cost with GSM)
-  paperCostPerKg?: number;   // Base cost per kg (for both modes)
-  paperCostIncreasePerGsm?: number; // Cost increase per GSM unit (for slope mode only)
+  gsmPriceMode: 'flat' | 'slope' | 'custom'; // GSM pricing mode: flat (same cost), slope (increasing cost), custom (per GSM costs)
+  paperCostPerKg?: number;   // Base cost per kg (for flat and slope modes)
+  paperCostIncreasePerGsm?: number; // Cost increase per GSM unit (for slope mode only)  customCostMatrix?: {[key: string]: number}; // Custom costs per kg by GSM (for custom mode, format: "gsm": cost)
+  
+  // Allow dynamic property access for TypeScript
+  [key: string]: any;
   
   // Pre-Press Costs
   designSetupFee: number;
@@ -106,6 +109,21 @@ export const DEFAULT_PRINTING_JOB: PrintingJob = {
   paperCostPerKg: 150,
   gsmPriceMode: 'flat', // Default to flat pricing
   paperCostIncreasePerGsm: 0.5, // Default increase per GSM for slope mode
+  customCostMatrix: {
+    "70": 120,  // Lower GSM papers are typically cheaper
+    "80": 130,
+    "90": 140,
+    "100": 145,
+    "120": 150,
+    "130": 155,
+    "150": 160,
+    "170": 165,
+    "200": 175,
+    "220": 185,
+    "250": 195,
+    "300": 210,
+    "350": 220
+  },
   designSetupFee: 0,
   plateCost: 25,
   proofingCharges: 15,

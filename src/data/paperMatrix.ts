@@ -9,9 +9,10 @@ export const calculateCostPerSheet = (
   height: number, // mm
   gsm: number,    // g/m²
   costPerKg: number, // cost per kg
-  gsmPriceMode: 'flat' | 'slope' = 'flat', // price mode
+  gsmPriceMode: 'flat' | 'slope' | 'custom' = 'flat', // price mode
   paperCostIncreasePerGsm: number = 0.5, // cost increase per GSM for slope mode
-  baseGsm: number = 80 // reference GSM for slope calculation
+  baseGsm: number = 80, // reference GSM for slope calculation
+  customCostMatrix?: {[key: string]: number} // custom cost per kg for each GSM
 ): number => {
   // Convert mm to m for area calculation
   const widthInMeters = width / 1000;
@@ -28,12 +29,19 @@ export const calculateCostPerSheet = (
   // Calculate base cost per kg
   let adjustedCostPerKg = costPerKg;
   
-  // If using slope pricing, adjust the cost per kg based on GSM
+  // Determine the cost per kg based on the pricing mode
   if (gsmPriceMode === 'slope' && gsm > baseGsm) {
     // Calculate how much to increase the cost based on GSM difference from base
     const gsmDifference = gsm - baseGsm;
     const costIncrease = gsmDifference * paperCostIncreasePerGsm;
     adjustedCostPerKg = costPerKg + costIncrease;
+  } 
+  else if (gsmPriceMode === 'custom' && customCostMatrix) {
+    // Use the custom cost for this specific GSM if available
+    const gsmStr = gsm.toString();
+    if (customCostMatrix[gsmStr] !== undefined) {
+      adjustedCostPerKg = customCostMatrix[gsmStr];
+    }
   }
   
   // Calculate cost
@@ -47,8 +55,9 @@ export const generatePaperMatrix = (
   sheetSizes: {id: string; width: number; height: number}[], 
   gsmValues: number[],
   costPerKg: number,
-  gsmPriceMode: 'flat' | 'slope' = 'flat',
-  paperCostIncreasePerGsm: number = 0.5
+  gsmPriceMode: 'flat' | 'slope' | 'custom' = 'flat',
+  paperCostIncreasePerGsm: number = 0.5,
+  customCostMatrix?: {[key: string]: number}
 ): PaperMatrix[] => {
   const matrix: PaperMatrix[] = [];
   
@@ -63,7 +72,9 @@ export const generatePaperMatrix = (
         gsm,
         costPerKg,
         gsmPriceMode,
-        paperCostIncreasePerGsm
+        paperCostIncreasePerGsm,
+        80, // baseGsm
+        customCostMatrix
       );
       
       matrix.push({
