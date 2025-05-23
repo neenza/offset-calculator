@@ -9,6 +9,8 @@ interface PaperMatrixSelectorProps {
   selectedGsm: number | undefined;
   selectedSizeId: string | undefined;
   costPerKg: number | undefined;
+  gsmPriceMode: 'flat' | 'slope';
+  paperCostIncreasePerGsm: number | undefined;
   onMatrixCellSelected: (gsm: number, sizeId: string, costPerSheet: number) => void;
   onCostPerKgChange: (value: number) => void;
 }
@@ -17,6 +19,8 @@ const PaperMatrixSelector: React.FC<PaperMatrixSelectorProps> = ({
   selectedGsm,
   selectedSizeId,
   costPerKg = 150,
+  gsmPriceMode = 'flat',
+  paperCostIncreasePerGsm = 0.5,
   onMatrixCellSelected,
   onCostPerKgChange
 }) => {
@@ -37,13 +41,15 @@ const PaperMatrixSelector: React.FC<PaperMatrixSelectorProps> = ({
           size.width,
           size.height,
           gsm,
-          costPerKg || 150
+          costPerKg || 150,
+          gsmPriceMode,
+          paperCostIncreasePerGsm || 0.5
         );
       });
     });
     
     setMatrixValues(newValues);
-  }, [costPerKg]);
+  }, [costPerKg, gsmPriceMode, paperCostIncreasePerGsm]);
     // Update highlighted cell when props change
   useEffect(() => {
     if (selectedGsm && selectedSizeId) {
@@ -97,20 +103,19 @@ const PaperMatrixSelector: React.FC<PaperMatrixSelectorProps> = ({
               <TableRow key={size.id}>
                 <TableCell className="font-medium whitespace-nowrap sticky left-0 z-10 bg-white shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                   {size.name}<br />
-                  <span className="text-xs text-gray-500">{size.description}</span>                </TableCell>                {GSM_OPTIONS.map(gsm => {
+                  <span className="text-xs text-gray-500">{size.description}</span>
+                </TableCell>
+                {GSM_OPTIONS.map(gsm => {
                   const key = `${size.id}-${gsm}`;
-                  const cost = matrixValues[key] || 0;
-                  const isSelected = highlightedCell === key;
+                  const isHighlighted = highlightedCell === key;
                   
                   return (
                     <TableCell 
-                      key={gsm} 
-                      className={`text-center cursor-pointer hover:bg-gray-200 min-w-[100px] ${
-                        isSelected ? 'bg-blue-100 font-bold' : ''
-                      }`}
+                      key={key} 
+                      className={`text-center cursor-pointer hover:bg-gray-100 ${isHighlighted ? 'bg-blue-100 hover:bg-blue-100' : ''}`}
                       onClick={() => handleCellClick(gsm, size.id)}
                     >
-                      {formatCurrency(cost)}
+                      {formatCurrency(matrixValues[key] || 0)}
                     </TableCell>
                   );
                 })}
@@ -118,11 +123,6 @@ const PaperMatrixSelector: React.FC<PaperMatrixSelectorProps> = ({
             ))}
           </TableBody>
         </Table>
-      </div>
-      
-      <div className="text-sm text-gray-600">
-        <p>Click on a cell to select that paper size and GSM combination.</p>
-        <p>Cost calculated as: Area (m²) × GSM × (Cost per kg ÷ 1000)</p>
       </div>
     </div>
   );

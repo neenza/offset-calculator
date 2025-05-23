@@ -41,12 +41,14 @@ export interface PrintingJob {
   customSheetHeight?: number;
   finalTrimWidth?: number;
   finalTrimHeight?: number;
-    // Paper Details
+  // Paper Details
   paperTypeId: string;       // Combined paper type ID (legacy)
   paperMaterialType: string; // Material type: uncoated, coated-matt, coated-gloss, cardstock
   paperGsm?: number;         // GSM value
   paperSizeId?: string;      // Size ID for matrix selection
-  paperCostPerKg?: number;   // User-input cost per kg
+  gsmPriceMode: 'flat' | 'slope'; // GSM pricing mode: flat (same cost for all GSM) or slope (increasing cost with GSM)
+  paperCostPerKg?: number;   // Base cost per kg (for both modes)
+  paperCostIncreasePerGsm?: number; // Cost increase per GSM unit (for slope mode only)
   
   // Pre-Press Costs
   designSetupFee: number;
@@ -96,11 +98,14 @@ export const DEFAULT_PRINTING_JOB: PrintingJob = {
   quantity: 500,
   numberOfColors: 4,
   isDoubleSided: false,
-  sheetSizeId: "a4",  paperTypeId: "coated-gloss-150",
+  sheetSizeId: "a4",
+  paperTypeId: "coated-gloss-150",
   paperMaterialType: "coated-gloss",
   paperGsm: 150,
   paperSizeId: "a4",
   paperCostPerKg: 150,
+  gsmPriceMode: 'flat', // Default to flat pricing
+  paperCostIncreasePerGsm: 0.5, // Default increase per GSM for slope mode
   designSetupFee: 0,
   plateCost: 25,
   proofingCharges: 15,

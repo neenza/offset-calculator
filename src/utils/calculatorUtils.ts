@@ -32,9 +32,11 @@ export function calculateTotalCost(job: PrintingJob): CostBreakdown {
         selectedSize.width,
         selectedSize.height,
         job.paperGsm,
-        job.paperCostPerKg
+        job.paperCostPerKg,
+        job.gsmPriceMode,
+        job.paperCostIncreasePerGsm
       );
-      console.log(`Using matrix calculation: ${costPerSheet} per sheet`);
+      console.log(`Using matrix calculation: ${costPerSheet} per sheet (${job.gsmPriceMode} pricing)`);
     }
   }
   

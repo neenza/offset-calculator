@@ -24,6 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { PrintingJob } from "@/models/PrintingJob";
 import { SHEET_SIZES } from "@/data/printingOptions";
 import { GSM_OPTIONS } from "@/data/paperMatrix";
@@ -313,12 +314,67 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange }) => 
                    `${job.paperMaterialType.replace('-', ' ').replace(/\b\w/g, c => c.toUpperCase())} ${job.paperGsm}gsm` : 
                    "Select paper material and GSM, or use the matrix below for precise pricing"}
                 </p>
-              </div>              {/* Paper Matrix Selector */}
-              <div className="mt-4 pt-4 border-t border-gray-200">                <h3 className="text-sm font-medium mb-2">Paper Cost Matrix</h3>
+              </div>              {/* GSM Price Mode */}
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <h3 className="text-sm font-medium mb-2">GSM Price Variation Mode</h3>
+                <div className="space-y-3">
+                  <RadioGroup
+                    value={job.gsmPriceMode}
+                    onValueChange={(value: 'flat' | 'slope') => {
+                      handleInputChange('gsmPriceMode', value);
+                    }}
+                    className="flex flex-col space-y-1"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="flat" id="flat-pricing" />
+                      <label htmlFor="flat-pricing" className="text-sm font-medium">
+                        Flat Pricing
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          Cost per kg is the same for all GSM values
+                        </p>
+                      </label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="slope" id="slope-pricing" />
+                      <label htmlFor="slope-pricing" className="text-sm font-medium">
+                        Slope Pricing
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          Cost increases with higher GSM values
+                        </p>
+                      </label>
+                    </div>
+                  </RadioGroup>
+
+                  {job.gsmPriceMode === 'slope' && (
+                    <div className="space-y-2 mt-3 ml-6">
+                      <label htmlFor="paperCostIncreasePerGsm" className="text-sm font-medium">
+                        Cost Increase per GSM (₹)
+                      </label>
+                      <Input
+                        id="paperCostIncreasePerGsm"
+                        type="number"
+                        min="0.1"
+                        step="0.1"
+                        value={job.paperCostIncreasePerGsm || 0.5}
+                        onChange={(e) => handleNumberInputChange(
+                          'paperCostIncreasePerGsm', 
+                          e.target.value
+                        )}
+                        className="w-32"
+                      />
+                      <p className="text-xs text-gray-500">
+                        Amount to increase cost per kg for each GSM unit above 80gsm
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>              {/* Paper Matrix Selector */}              <div className="mt-4 pt-4 border-t border-gray-200">                <h3 className="text-sm font-medium mb-2">Paper Cost Matrix</h3>
                 <PaperMatrixSelector 
                   selectedGsm={job.paperGsm}
                   selectedSizeId={job.paperSizeId}
                   costPerKg={job.paperCostPerKg}
+                  gsmPriceMode={job.gsmPriceMode}
+                  paperCostIncreasePerGsm={job.paperCostIncreasePerGsm}
                   onMatrixCellSelected={(gsm, sizeId, costPerSheet) => {
                     // Create a batch of updates to ensure all changes are applied together
                     const updates: Partial<PrintingJob> = {};
