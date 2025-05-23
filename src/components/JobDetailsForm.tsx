@@ -27,6 +27,7 @@ import { Slider } from "@/components/ui/slider";
 import { PrintingJob } from "@/models/PrintingJob";
 import { SHEET_SIZES } from "@/data/printingOptions";
 import { useSettingsStore } from '@/utils/settingsStore';
+import PaperMatrixSelector from './PaperMatrixSelector';
 import CostBreakdown from './CostBreakdown';
 
 interface JobDetailsFormProps {
@@ -175,9 +176,7 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange }) => 
                     />
                   </div>
                 </div>
-              )}
-
-              <div className="space-y-2">
+              )}              <div className="space-y-2">
                 <label htmlFor="paperType" className="text-sm font-medium">Paper Type</label>
                 <Select 
                   value={job.paperTypeId} 
@@ -197,6 +196,31 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange }) => 
                 <p className="text-xs text-gray-500 mt-1">
                   {paperTypes.find(p => p.id === job.paperTypeId)?.description}
                 </p>
+              </div>
+
+              {/* Paper Matrix Selector */}
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <h3 className="text-sm font-medium mb-2">Paper Cost Matrix</h3>
+                <PaperMatrixSelector 
+                  selectedGsm={job.paperGsm}
+                  selectedSizeId={job.paperSizeId}
+                  costPerKg={job.paperCostPerKg}
+                  onMatrixCellSelected={(gsm, sizeId, costPerSheet) => {
+                    handleInputChange('paperGsm', gsm);
+                    handleInputChange('paperSizeId', sizeId);
+                    console.log(`Selected: ${sizeId} at ${gsm}gsm - Cost: ${costPerSheet}`);
+                    // We also need to update the paper type to match
+                    // This could be improved with a better matching algorithm
+                    const matchingPaper = paperTypes.find(p => 
+                      p.name.toLowerCase().includes(gsm.toString()) || 
+                      p.description.toLowerCase().includes(gsm.toString())
+                    );
+                    if (matchingPaper) {
+                      handleInputChange('paperTypeId', matchingPaper.id);
+                    }
+                  }}
+                  onCostPerKgChange={(value) => handleInputChange('paperCostPerKg', value)}
+                />
               </div>
             </div>
           </AccordionContent>

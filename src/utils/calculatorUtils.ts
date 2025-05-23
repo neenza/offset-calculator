@@ -1,6 +1,7 @@
 import { CostBreakdown, PrintingJob } from "../models/PrintingJob";
 import { SHEET_SIZES } from "../data/printingOptions";
 import { useSettingsStore } from "../utils/settingsStore";
+import { calculateCostPerSheet } from "../data/paperMatrix";
 
 export function calculateTotalCost(job: PrintingJob): CostBreakdown {
   // Get current settings from the store
@@ -19,7 +20,25 @@ export function calculateTotalCost(job: PrintingJob): CostBreakdown {
   // Calculate material cost
   const sheetsNeeded = job.quantity * (job.isDoubleSided ? 1 : 1) * (1 + job.wastagePercentage / 100);
   console.log("Sheets Needed: ", sheetsNeeded);
-  const paperCost = selectedPaper ? sheetsNeeded * selectedPaper.costPerSheet : 0;
+  
+  // Get cost per sheet - either from the matrix calculation or from the paper type
+  let costPerSheet = selectedPaper ? selectedPaper.costPerSheet : 0;
+  
+  // If we have matrix values, use those for a more accurate calculation
+  if (job.paperGsm && job.paperSizeId && job.paperCostPerKg) {
+    const selectedSize = SHEET_SIZES.find(size => size.id === job.paperSizeId);
+    if (selectedSize) {
+      costPerSheet = calculateCostPerSheet(
+        selectedSize.width,
+        selectedSize.height,
+        job.paperGsm,
+        job.paperCostPerKg
+      );
+      console.log(`Using matrix calculation: ${costPerSheet} per sheet`);
+    }
+  }
+  
+  const paperCost = sheetsNeeded * costPerSheet;
   console.log("Paper Cost: ", paperCost);
   const materialCost = paperCost;
   

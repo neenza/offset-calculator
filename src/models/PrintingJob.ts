@@ -1,8 +1,15 @@
+export interface PaperMatrix {
+  gsm: number;
+  sizeId: string;
+  costPerSheet: number;
+}
+
 export interface PaperType {
   id: string;
   name: string;
   description: string;
   costPerSheet: number;
+  costPerKg?: number;  // New field for cost per kg
 }
 
 export interface SheetSize {
@@ -37,6 +44,9 @@ export interface PrintingJob {
   
   // Paper Details
   paperTypeId: string;
+  paperGsm?: number;         // Added for matrix selection - GSM value
+  paperSizeId?: string;      // Added for matrix selection - Size ID
+  paperCostPerKg?: number;   // Added for user-input cost per kg
   
   // Pre-Press Costs
   designSetupFee: number;
@@ -88,6 +98,9 @@ export const DEFAULT_PRINTING_JOB: PrintingJob = {
   isDoubleSided: false,
   sheetSizeId: "a4",
   paperTypeId: "coated-gloss-150",
+  paperGsm: 150,
+  paperSizeId: "a4",
+  paperCostPerKg: 150,
   designSetupFee: 0,
   plateCost: 25,
   proofingCharges: 15,
