@@ -41,12 +41,12 @@ export interface PrintingJob {
   customSheetHeight?: number;
   finalTrimWidth?: number;
   finalTrimHeight?: number;
-  
-  // Paper Details
-  paperTypeId: string;
-  paperGsm?: number;         // Added for matrix selection - GSM value
-  paperSizeId?: string;      // Added for matrix selection - Size ID
-  paperCostPerKg?: number;   // Added for user-input cost per kg
+    // Paper Details
+  paperTypeId: string;       // Combined paper type ID (legacy)
+  paperMaterialType: string; // Material type: uncoated, coated-matt, coated-gloss, cardstock
+  paperGsm?: number;         // GSM value
+  paperSizeId?: string;      // Size ID for matrix selection
+  paperCostPerKg?: number;   // User-input cost per kg
   
   // Pre-Press Costs
   designSetupFee: number;
@@ -96,8 +96,8 @@ export const DEFAULT_PRINTING_JOB: PrintingJob = {
   quantity: 500,
   numberOfColors: 4,
   isDoubleSided: false,
-  sheetSizeId: "a4",
-  paperTypeId: "coated-gloss-150",
+  sheetSizeId: "a4",  paperTypeId: "coated-gloss-150",
+  paperMaterialType: "coated-gloss",
   paperGsm: 150,
   paperSizeId: "a4",
   paperCostPerKg: 150,

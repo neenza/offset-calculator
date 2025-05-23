@@ -26,6 +26,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 import { PrintingJob } from "@/models/PrintingJob";
 import { SHEET_SIZES } from "@/data/printingOptions";
+import { GSM_OPTIONS } from "@/data/paperMatrix";
 import { useSettingsStore } from '@/utils/settingsStore';
 import PaperMatrixSelector from './PaperMatrixSelector';
 import CostBreakdown from './CostBreakdown';
@@ -84,6 +85,23 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange }) => 
       handleInputChange('paperSizeId', job.sheetSizeId);
     }
   }, [job.sheetSizeId]);
+
+  useEffect(() => {
+    if (job.paperTypeId) {
+      // Extract the material type from paperTypeId (e.g., "coated-gloss-150" -> "coated-gloss")
+      const parts = job.paperTypeId.split('-');
+      if (parts.length >= 2) {
+        // Remove the last part which is the GSM number
+        const materialParts = parts.slice(0, -1);
+        const materialType = materialParts.join('-');
+        
+        if (materialType && materialType !== job.paperMaterialType) {
+          handleInputChange('paperMaterialType', materialType);
+          console.log(`Extracted material type: ${materialType} from paper type: ${job.paperTypeId}`);
+        }
+      }
+    }
+  }, [job.paperTypeId]);
 
   useEffect(() => {
     if (job.paperTypeId) {
@@ -223,86 +241,102 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange }) => 
                       onChange={(e) => handleNumberInputChange('customSheetHeight', e.target.value)}
                     />
                   </div>
-                </div>              )}              <div className="space-y-2">
-                <label htmlFor="paperType" className="text-sm font-medium">Paper Type</label>                <Select 
-                  key={`paper-type-${paperTypeKey}`}
-                  value={job.paperTypeId || ""}
+                </div>              )}                {/* Paper Selection (Split into Material Type and GSM) */}
+              
+              {/* Paper Material Type */}
+              <div className="space-y-2">
+                <label htmlFor="paperMaterialType" className="text-sm font-medium">Paper Material</label>
+                <Select 
+                  key={`paper-material-${paperTypeKey}`}
+                  value={job.paperMaterialType || "coated-gloss"}
                   onValueChange={(value) => {
-                    // Extract GSM from the paper type ID if possible
-                    const gsmMatch = value.match(/(\d+)$/);
-                    if (gsmMatch && gsmMatch[1]) {
-                      const gsm = parseInt(gsmMatch[1], 10);
-                      if (!isNaN(gsm)) {
-                        // Batch updates for better synchronization
-                        const updates: Partial<PrintingJob> = {
-                          paperTypeId: value,
-                          paperGsm: gsm
-                        };
-                        
-                        onJobChange({
-                          ...job,
-                          ...updates
-                        });
-                        console.log(`Paper dropdown: updated to GSM ${gsm} from paper type: ${value}`);
-                      } else {
-                        handleInputChange('paperTypeId', value);
-                      }
-                    } else {
-                      handleInputChange('paperTypeId', value);
-                    }
+                    // Update paper material type and also update the combined paperTypeId
+                    const updates: Partial<PrintingJob> = {
+                      paperMaterialType: value,
+                      paperTypeId: `${value}-${job.paperGsm || 150}`
+                    };
+                    
+                    onJobChange({
+                      ...job,
+                      ...updates
+                    });
+                    console.log(`Paper material updated to: ${value}`);
                   }}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select paper type" />
+                    <SelectValue placeholder="Select paper material" />
                   </SelectTrigger>
-                  <SelectContent className="max-h-[300px]">
+                  <SelectContent>
                     <SelectItem value="uncoated">Uncoated Paper</SelectItem>
                     <SelectItem value="coated-matt">Coated Matt Paper</SelectItem>
                     <SelectItem value="coated-gloss">Coated Gloss Paper</SelectItem>
                     <SelectItem value="cardstock">Cardstock</SelectItem>
-                    {paperTypes.map(paper => (
-                      <SelectItem key={paper.id} value={paper.id}>
-                        {paper.name}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {/* Paper GSM */}
+              <div className="space-y-2">
+                <label htmlFor="paperGsm" className="text-sm font-medium">Paper GSM</label>
+                <Select 
+                  key={`paper-gsm-${paperTypeKey}`}
+                  value={job.paperGsm?.toString() || ""}
+                  onValueChange={(value) => {
+                    const gsm = parseInt(value, 10);
+                    if (!isNaN(gsm)) {
+                      // Batch updates for better synchronization
+                      const updates: Partial<PrintingJob> = {
+                        paperGsm: gsm,
+                        paperTypeId: `${job.paperMaterialType || 'coated-gloss'}-${gsm}`
+                      };
+                      
+                      onJobChange({
+                        ...job,
+                        ...updates
+                      });
+                      console.log(`Paper GSM updated to: ${gsm}`);
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select GSM" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[300px]">
+                    {GSM_OPTIONS.map(gsm => (
+                      <SelectItem key={gsm} value={gsm.toString()}>
+                        {gsm} GSM
                       </SelectItem>
                     ))}
                   </SelectContent>
-                </Select>
-                <p className="text-xs text-gray-500 mt-1">
-                  {paperTypes.find(p => p.id === job.paperTypeId)?.description || 
-                   "Select paper and GSM from the matrix below for precise pricing"}
+                </Select>                <p className="text-xs text-gray-500 mt-1">
+                  {job.paperMaterialType && job.paperGsm ? 
+                   `${job.paperMaterialType.replace('-', ' ').replace(/\b\w/g, c => c.toUpperCase())} ${job.paperGsm}gsm` : 
+                   "Select paper material and GSM, or use the matrix below for precise pricing"}
                 </p>
               </div>              {/* Paper Matrix Selector */}
-              <div className="mt-4 pt-4 border-t border-gray-200">
-                <h3 className="text-sm font-medium mb-2">Paper Cost Matrix</h3>                <PaperMatrixSelector 
+              <div className="mt-4 pt-4 border-t border-gray-200">                <h3 className="text-sm font-medium mb-2">Paper Cost Matrix</h3>
+                <PaperMatrixSelector 
                   selectedGsm={job.paperGsm}
                   selectedSizeId={job.paperSizeId}
-                  costPerKg={job.paperCostPerKg}                  onMatrixCellSelected={(gsm, sizeId, costPerSheet) => {
+                  costPerKg={job.paperCostPerKg}
+                  onMatrixCellSelected={(gsm, sizeId, costPerSheet) => {
                     // Create a batch of updates to ensure all changes are applied together
                     const updates: Partial<PrintingJob> = {};
                     
                     // Update matrix-specific fields
                     updates.paperGsm = gsm;
                     updates.paperSizeId = sizeId;
-                    
-                    // Also update the sheet size dropdown to match
+                      // Also update the sheet size dropdown to match
                     updates.sheetSizeId = sizeId;
-                      // Update the paper type based on the GSM selection
-                    // Find the most appropriate paper type based on selection
-                    let paperType = 'coated-gloss';
-                    if (job.paperTypeId) {
-                      if (job.paperTypeId.startsWith('uncoated')) {
-                        paperType = 'uncoated';
-                      } else if (job.paperTypeId.startsWith('coated-matt')) {
-                        paperType = 'coated-matt';
-                      } else if (job.paperTypeId.startsWith('coated-gloss')) {
-                        paperType = 'coated-gloss';
-                      } else if (job.paperTypeId.startsWith('cardstock')) {
-                        paperType = 'cardstock';
-                      }
-                    }
                     
-                    // Set the paper type ID with selected GSM
-                    const newPaperTypeId = `${paperType}-${gsm}`;
+                    // Use the currently selected paper material type or default to coated-gloss
+                    const paperMaterialType = job.paperMaterialType || 'coated-gloss';
+                    
+                    // Update material type
+                    updates.paperMaterialType = paperMaterialType;
+                    
+                    // Create the combined paperTypeId from material type and GSM
+                    const newPaperTypeId = `${updates.paperMaterialType}-${gsm}`;
                     updates.paperTypeId = newPaperTypeId;
                     
                     // Apply all updates at once
@@ -311,7 +345,7 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange }) => 
                       ...updates
                     });
                     
-                    console.log(`Matrix selection applied: Size=${sizeId}, GSM=${gsm}, Paper=${newPaperTypeId}, Cost=${costPerSheet}`);
+                    console.log(`Matrix selection applied: Size=${sizeId}, GSM=${gsm}, Paper=${updates.paperMaterialType}, Cost=${costPerSheet}`);
                   }}
                   onCostPerKgChange={(value) => handleInputChange('paperCostPerKg', value)}
                 />
