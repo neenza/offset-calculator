@@ -1,0 +1,530 @@
+import React, { useState } from 'react';
+import { 
+  Card, 
+  CardContent, 
+  CardHeader, 
+  CardTitle 
+} from "@/components/ui/card";
+import { 
+  Accordion, 
+  AccordionContent, 
+  AccordionItem, 
+  AccordionTrigger 
+} from "@/components/ui/accordion";
+import { 
+  Form, 
+  FormControl, 
+  FormDescription, 
+  FormField, 
+  FormItem, 
+  FormLabel, 
+  FormMessage 
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Slider } from "@/components/ui/slider";
+import { PrintingJob } from "@/models/PrintingJob";
+import { SHEET_SIZES } from "@/data/printingOptions";
+import { useSettingsStore } from '@/utils/settingsStore';
+import CostBreakdown from './CostBreakdown';
+
+interface JobDetailsFormProps {
+  job: PrintingJob;
+  onJobChange: (job: PrintingJob) => void;
+}
+
+const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange }) => {
+  const [openSections, setOpenSections] = useState<string[]>([
+    "printing-specs",
+    "cost-breakdown"
+  ]);
+
+  const { paperTypes, bindingOptions } = useSettingsStore();
+
+  const handleInputChange = (field: keyof PrintingJob, value: any) => {
+    // Only update if value has actually changed
+    if (job[field] !== value) {
+      console.log(`Updating ${field} to:`, value);
+      // Create a partial update with just the changed field
+      const update = { [field]: value } as Partial<PrintingJob>;
+      onJobChange({
+        ...job,
+        ...update
+      });
+    }
+  };
+
+  const handleNumberInputChange = (field: keyof PrintingJob, value: string) => {
+    const numberValue = value === '' ? 0 : parseFloat(value);
+    handleInputChange(field, numberValue);
+  };
+
+  const handleBindingOptionChange = (value: string) => {
+    handleInputChange('bindingOptionId', value === 'none' ? null : value);
+  };
+
+  return (
+    <div className="space-y-4 mb-16">
+      <Card className="border border-gray-200">
+        <CardHeader className="bg-gray-200">
+          <CardTitle className="text-print-blue">Job Details</CardTitle>
+        </CardHeader>
+        <CardContent className="bg-gray-100 p-4 shadow-inner">
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label htmlFor="jobName" className="text-sm font-medium">Job Name/Description</label>
+              <Input 
+                id="jobName" 
+                placeholder="Enter job name or description" 
+                value={job.jobName}
+                onChange={(e) => handleInputChange('jobName', e.target.value)}
+                className="bg-white"
+              />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="quantity" className="text-sm font-medium">Quantity</label>
+              <Input 
+                id="quantity" 
+                type="number" 
+                min="1"
+                value={job.quantity}
+                onChange={(e) => handleNumberInputChange('quantity', e.target.value)}
+                className="bg-white"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Accordion 
+        type="multiple" 
+        value={openSections}
+        onValueChange={setOpenSections}
+      >
+        {/* Printing Specifications */}
+        <AccordionItem value="printing-specs" className="mb-2">
+          <AccordionTrigger className="bg-gray-200 hover:bg-gray-300 rounded-t-md px-4 py-2 text-print-blue font-medium transition-colors">
+            Printing Specifications
+          </AccordionTrigger>
+          <AccordionContent className="bg-gray-100 p-4 border border-gray-200 rounded-b-md shadow-inner">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label htmlFor="colors" className="text-sm font-medium">Number of Colors</label>
+                <Select 
+                  value={job.numberOfColors.toString()} 
+                  onValueChange={(value) => handleNumberInputChange('numberOfColors', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select number of colors" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">1-color</SelectItem>
+                    <SelectItem value="2">2-color</SelectItem>
+                    <SelectItem value="4">4-color (CMYK)</SelectItem>
+                    <SelectItem value="5">5-color (CMYK + Spot)</SelectItem>
+                    <SelectItem value="6">6-color</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="doubleSided" 
+                  checked={job.isDoubleSided}
+                  onCheckedChange={(checked) => handleInputChange('isDoubleSided', !!checked)}
+                />
+                <label htmlFor="doubleSided" className="text-sm font-medium">Double-sided Printing</label>
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="sheetSize" className="text-sm font-medium">Sheet Size</label>
+                <Select 
+                  value={job.sheetSizeId} 
+                  onValueChange={(value) => handleInputChange('sheetSizeId', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select sheet size" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SHEET_SIZES.map(size => (
+                      <SelectItem key={size.id} value={size.id}>
+                        {size.name} - {size.description}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {job.sheetSizeId === 'custom' && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label htmlFor="customWidth" className="text-sm font-medium">Width (mm)</label>
+                    <Input 
+                      id="customWidth" 
+                      type="number" 
+                      value={job.customSheetWidth || ''}
+                      onChange={(e) => handleNumberInputChange('customSheetWidth', e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label htmlFor="customHeight" className="text-sm font-medium">Height (mm)</label>
+                    <Input 
+                      id="customHeight" 
+                      type="number" 
+                      value={job.customSheetHeight || ''}
+                      onChange={(e) => handleNumberInputChange('customSheetHeight', e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+
+        {/* Paper Selection */}
+        <AccordionItem value="paper-selection" className="mb-2">
+          <AccordionTrigger className="bg-gray-200 hover:bg-gray-300 rounded-t-md px-4 py-2 text-print-blue font-medium transition-colors">
+            Paper Selection
+          </AccordionTrigger>
+          <AccordionContent className="bg-gray-100 p-4 border border-gray-200 rounded-b-md shadow-inner">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label htmlFor="paperType" className="text-sm font-medium">Paper Type</label>
+                <Select 
+                  value={job.paperTypeId} 
+                  onValueChange={(value) => handleInputChange('paperTypeId', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select paper type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {paperTypes.map(paper => (
+                      <SelectItem key={paper.id} value={paper.id}>
+                        {paper.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-gray-500 mt-1">
+                  {paperTypes.find(p => p.id === job.paperTypeId)?.description}
+                </p>
+              </div>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+
+        {/* Pre-Press Costs */}
+        <AccordionItem value="prepress-costs" className="mb-2">
+          <AccordionTrigger className="bg-gray-200 hover:bg-gray-300 rounded-t-md px-4 py-2 text-print-blue font-medium transition-colors">
+            Pre-Press Costs
+          </AccordionTrigger>
+          <AccordionContent className="bg-gray-100 p-4 border border-gray-200 rounded-b-md shadow-inner">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label htmlFor="designSetupFee" className="text-sm font-medium">Design & Setup Fee (₹)</label>
+                <Input 
+                  id="designSetupFee" 
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={job.designSetupFee}
+                  onChange={(e) => handleNumberInputChange('designSetupFee', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="plateCost" className="text-sm font-medium">Plate Cost (₹ per plate)</label>
+                <Input 
+                  id="plateCost" 
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={job.plateCost}
+                  onChange={(e) => handleNumberInputChange('plateCost', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="proofingCharges" className="text-sm font-medium">Proofing Charges (₹)</label>
+                <Input 
+                  id="proofingCharges" 
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={job.proofingCharges}
+                  onChange={(e) => handleNumberInputChange('proofingCharges', e.target.value)}
+                />
+              </div>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+
+        {/* Press & Production Costs */}
+        <AccordionItem value="press-costs" className="mb-2">
+          <AccordionTrigger className="bg-gray-200 hover:bg-gray-300 rounded-t-md px-4 py-2 text-print-blue font-medium transition-colors">
+            Press & Production Costs
+          </AccordionTrigger>
+          <AccordionContent className="bg-gray-100 p-4 border border-gray-200 rounded-b-md shadow-inner">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label htmlFor="pressHourlyRate" className="text-sm font-medium">Press Hourly Rate (₹ per hour)</label>
+                <Input 
+                  id="pressHourlyRate" 
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={job.pressHourlyRate}
+                  onChange={(e) => handleNumberInputChange('pressHourlyRate', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="estimatedPrintRunTime" className="text-sm font-medium">
+                  Estimated Print Run Time (hours)
+                </label>
+                <Input 
+                  id="estimatedPrintRunTime" 
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  value={job.estimatedPrintRunTime}
+                  onChange={(e) => handleNumberInputChange('estimatedPrintRunTime', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="makeReadyTime" className="text-sm font-medium">Make-Ready Time (hours)</label>
+                <Input 
+                  id="makeReadyTime" 
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  value={job.makeReadyTime}
+                  onChange={(e) => handleNumberInputChange('makeReadyTime', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Wastage Allowance (%)</label>
+                <div className="pt-2">
+                  <Slider
+                    value={[job.wastagePercentage]}
+                    min={0}
+                    max={20}
+                    step={1}
+                    onValueChange={(value) => handleInputChange('wastagePercentage', value[0])}
+                  />
+                  <div className="text-right text-sm mt-1">{job.wastagePercentage}%</div>
+                </div>
+              </div>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+        
+        {/* Finishing Options */}
+        <AccordionItem value="finishing-options" className="mb-2">
+          <AccordionTrigger className="bg-gray-200 hover:bg-gray-300 rounded-t-md px-4 py-2 text-print-blue font-medium transition-colors">
+            Finishing Options
+          </AccordionTrigger>
+          <AccordionContent className="bg-gray-100 p-4 border border-gray-200 rounded-b-md shadow-inner">
+            <div className="space-y-4">
+              <div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="foldingRequired" 
+                    checked={job.foldingRequired || false}
+                    onCheckedChange={(checked) => handleInputChange('foldingRequired', !!checked)}
+                  />
+                  <label htmlFor="foldingRequired" className="text-sm font-medium">Folding Required</label>
+                </div>
+                
+                {job.foldingRequired && (
+                  <div className="mt-2 ml-6 space-y-2">
+                    <label htmlFor="numberOfFolds" className="text-sm font-medium">Number of Folds</label>
+                    <Input 
+                      id="numberOfFolds" 
+                      type="number"
+                      min="1"
+                      max="4"
+                      value={job.numberOfFolds || 0}
+                      onChange={(e) => handleNumberInputChange('numberOfFolds', e.target.value)}
+                    />
+                  </div>
+                )}
+              </div>
+              
+              <div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="cuttingRequired" 
+                    checked={job.cuttingRequired || false}
+                    onCheckedChange={(checked) => handleInputChange('cuttingRequired', !!checked)}
+                  />
+                  <label htmlFor="cuttingRequired" className="text-sm font-medium">Cutting/Trimming Required</label>
+                </div>
+                
+                {job.cuttingRequired && (
+                  <div className="mt-2 ml-6 space-y-2">
+                    <label htmlFor="numberOfCuts" className="text-sm font-medium">Number of Cuts</label>
+                    <Input 
+                      id="numberOfCuts" 
+                      type="number"
+                      min="1"
+                      value={job.numberOfCuts || 0}
+                      onChange={(e) => handleNumberInputChange('numberOfCuts', e.target.value)}
+                    />
+                  </div>
+                )}
+              </div>
+              
+              <div className="space-y-2">
+                <label htmlFor="bindingOption" className="text-sm font-medium">Binding Option</label>
+                <Select 
+                  value={job.bindingOptionId || 'none'}
+                  onValueChange={handleBindingOptionChange}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select binding (if required)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {bindingOptions.map(binding => (
+                      <SelectItem key={binding.id} value={binding.id}>
+                        {binding.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {job.bindingOptionId && bindingOptions.find(b => b.id === job.bindingOptionId) && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    {bindingOptions.find(b => b.id === job.bindingOptionId)?.description}
+                  </p>
+                )}
+              </div>
+              
+              <div className="space-y-2">
+                <label htmlFor="laminationType" className="text-sm font-medium">Lamination</label>
+                <Select 
+                  value={job.laminationType || 'none'}
+                  onValueChange={(value: 'none' | 'matt' | 'gloss') => handleInputChange('laminationType', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select lamination type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    <SelectItem value="matt">Matt</SelectItem>
+                    <SelectItem value="gloss">Gloss</SelectItem>
+                  </SelectContent>
+                </Select>
+                
+                {job.laminationType !== 'none' && (
+                  <div className="flex items-center space-x-2 mt-2">
+                    <Checkbox 
+                      id="doubleSidedLamination" 
+                      checked={job.isDoubleSidedLamination || false}
+                      onCheckedChange={(checked) => handleInputChange('isDoubleSidedLamination', !!checked)}
+                    />
+                    <label htmlFor="doubleSidedLamination" className="text-sm">Double-sided Lamination</label>
+                  </div>
+                )}
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="embossingRequired" 
+                  checked={job.embossingRequired || false}
+                  onCheckedChange={(checked) => handleInputChange('embossingRequired', !!checked)}
+                />
+                <label htmlFor="embossingRequired" className="text-sm font-medium">Embossing Required</label>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="foilingRequired" 
+                  checked={job.foilingRequired || false}
+                  onCheckedChange={(checked) => handleInputChange('foilingRequired', !!checked)}
+                />
+                <label htmlFor="foilingRequired" className="text-sm font-medium">Foiling Required</label>
+              </div>
+              
+              <div className="space-y-2">
+                <label htmlFor="packagingDeliveryCost" className="text-sm font-medium">
+                  Packaging & Delivery Cost (₹)
+                </label>
+                <Input 
+                  id="packagingDeliveryCost" 
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={job.packagingDeliveryCost || 0}
+                  onChange={(e) => handleNumberInputChange('packagingDeliveryCost', e.target.value)}
+                />
+              </div>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+        
+        {/* Additional Costs */}
+        <AccordionItem value="additional-costs" className="mb-2">
+          <AccordionTrigger className="bg-gray-200 hover:bg-gray-300 rounded-t-md px-4 py-2 text-print-blue font-medium transition-colors">
+            Additional Costs
+          </AccordionTrigger>
+          <AccordionContent className="bg-gray-100 p-4 border border-gray-200 rounded-b-md shadow-inner">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Tax Rate (%)</label>
+                <div className="pt-2">
+                  <Slider
+                    value={[job.taxPercentage]}
+                    min={0}
+                    max={25}
+                    step={0.5}
+                    onValueChange={(value) => handleInputChange('taxPercentage', value[0])}
+                  />
+                  <div className="text-right text-sm mt-1">{job.taxPercentage}%</div>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Discount (%)</label>
+                <div className="pt-2">
+                  <Slider
+                    value={[job.discountPercentage]}
+                    min={0}
+                    max={50}
+                    step={1}
+                    onValueChange={(value) => handleInputChange('discountPercentage', value[0])}
+                  />
+                  <div className="text-right text-sm mt-1">{job.discountPercentage}%</div>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Rush Fee (%)</label>
+                <div className="pt-2">
+                  <Slider
+                    value={[job.rushFeePercentage]}
+                    min={0}
+                    max={100}
+                    step={5}
+                    onValueChange={(value) => handleInputChange('rushFeePercentage', value[0])}
+                  />
+                  <div className="text-right text-sm mt-1">{job.rushFeePercentage}%</div>
+                </div>
+              </div>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+
+        {/* Cost Breakdown */}
+        <AccordionItem value="cost-breakdown" className="mt-4">
+          <AccordionTrigger className="bg-gray-200 hover:bg-gray-300 rounded-t-md px-4 py-2 text-print-blue font-medium transition-colors">
+            Cost Breakdown
+          </AccordionTrigger>
+          <AccordionContent className="bg-gray-100 p-4 border border-gray-200 rounded-b-md shadow-inner">
+            <CostBreakdown job={job} />
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
+    </div>
+  );
+};
+
+export default JobDetailsForm;

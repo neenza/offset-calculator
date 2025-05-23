@@ -1,0 +1,192 @@
+import React, { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { 
+  Card, 
+  CardContent, 
+  CardHeader, 
+  CardTitle 
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { 
+  Accordion, 
+  AccordionContent, 
+  AccordionItem, 
+  AccordionTrigger 
+} from "@/components/ui/accordion";
+import { ArrowLeft, Save, RotateCcw } from 'lucide-react';
+import { useToast } from "@/components/ui/use-toast";
+import { useSettingsStore } from '@/utils/settingsStore';
+
+const Settings = () => {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const { 
+    paperTypes, 
+    bindingOptions, 
+    setPaperTypes, 
+    setBindingOptions,
+    saveSettings,
+    resetSettings,
+    loadSettings
+  } = useSettingsStore();
+
+  // Load settings when component mounts
+  useEffect(() => {
+    loadSettings();
+  }, [loadSettings]);
+
+  const handlePaperCostChange = (paperId: string, newCost: string) => {
+    const cost = parseFloat(newCost) || 0;
+    console.log(`Updating paper ${paperId} cost to: ${cost}`);
+    setPaperTypes(paperTypes.map(paper => 
+      paper.id === paperId ? { ...paper, costPerSheet: cost } : paper
+    ));
+  };
+
+  const handleBindingCostChange = (bindingId: string, field: 'baseCost' | 'perUnitCost', newCost: string) => {
+    const cost = parseFloat(newCost) || 0;
+    console.log(`Updating binding ${bindingId} ${field} to: ${cost}`);
+    setBindingOptions(bindingOptions.map(binding => 
+      binding.id === bindingId ? { ...binding, [field]: cost } : binding
+    ));
+  };
+
+  const handleSave = () => {
+    saveSettings();
+    console.log("Saved settings:", { paperTypes, bindingOptions });
+    toast({
+      title: "Settings Saved",
+      description: "Your cost settings have been saved successfully.",
+    });
+  };
+
+  const handleReset = () => {
+    resetSettings();
+    toast({
+      title: "Settings Reset",
+      description: "Your cost settings have been reset to defaults.",
+    });
+  };
+
+  return (
+    <div className="container mx-auto px-4 py-6">
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-2">
+          <Button 
+            variant="ghost" 
+            size="icon"
+            onClick={() => navigate('/')}
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <h1 className="text-2xl font-bold">Settings</h1>
+        </div>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={handleReset}
+          >
+            <RotateCcw className="h-4 w-4 mr-2" />
+            Reset to Defaults
+          </Button>
+          <Button onClick={handleSave}>
+            <Save className="h-4 w-4 mr-2" />
+            Save Changes
+          </Button>
+        </div>
+      </div>
+
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Paper Types</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Accordion type="multiple" defaultValue={paperTypes.map(p => p.id)}>
+              {paperTypes.map(paper => (
+                <AccordionItem key={paper.id} value={paper.id}>
+                  <AccordionTrigger className="hover:no-underline">
+                    <div className="flex items-center justify-between w-full pr-4">
+                      <span>{paper.name}</span>
+                      <span className="text-sm text-gray-500">₹{paper.costPerSheet} per sheet</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <div className="space-y-4">
+                      <div>
+                        <p className="text-sm text-gray-500 mb-2">{paper.description}</p>
+                        <div className="flex items-center gap-2">
+                          <label className="text-sm whitespace-nowrap">Cost per Sheet (₹):</label>
+                          <Input 
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={paper.costPerSheet}
+                            onChange={(e) => handlePaperCostChange(paper.id, e.target.value)}
+                            className="max-w-[200px]"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Binding Options</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Accordion type="multiple" defaultValue={bindingOptions.map(b => b.id)}>
+              {bindingOptions.map(binding => (
+                <AccordionItem key={binding.id} value={binding.id}>
+                  <AccordionTrigger className="hover:no-underline">
+                    <div className="flex items-center justify-between w-full pr-4">
+                      <span>{binding.name}</span>
+                      <span className="text-sm text-gray-500">
+                        Base: ₹{binding.baseCost} | Per Unit: ₹{binding.perUnitCost}
+                      </span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <div className="space-y-4">
+                      <p className="text-sm text-gray-500 mb-2">{binding.description}</p>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <label className="text-sm">Base Cost (₹):</label>
+                          <Input 
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={binding.baseCost}
+                            onChange={(e) => handleBindingCostChange(binding.id, 'baseCost', e.target.value)}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm">Cost per Unit (₹):</label>
+                          <Input 
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={binding.perUnitCost}
+                            onChange={(e) => handleBindingCostChange(binding.id, 'perUnitCost', e.target.value)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+};
+
+export default Settings;
