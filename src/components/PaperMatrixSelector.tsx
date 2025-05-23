@@ -51,8 +51,7 @@ const PaperMatrixSelector: React.FC<PaperMatrixSelectorProps> = ({
   };
   
   return (
-    <div className="space-y-4 mt-4">
-      <div className="bg-gray-200 p-2 rounded-md">
+    <div className="space-y-4 mt-4">      <div className="bg-gray-200 p-2 rounded-md">
         <div className="space-y-2">
           <label htmlFor="costPerKg" className="text-sm font-medium">Cost per Kg (₹)</label>
           <Input 
@@ -68,11 +67,11 @@ const PaperMatrixSelector: React.FC<PaperMatrixSelectorProps> = ({
         </div>
       </div>
       
-      <div className="overflow-x-auto">
-        <Table>
+      <div className="relative overflow-x-auto">
+        <Table className="w-full">
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[80px]">Size</TableHead>
+              <TableHead className="w-[180px] sticky left-0 z-20 bg-white shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Size</TableHead>
               {GSM_OPTIONS.map(gsm => (
                 <TableHead key={gsm} className="text-center">
                   {gsm} GSM
@@ -83,10 +82,9 @@ const PaperMatrixSelector: React.FC<PaperMatrixSelectorProps> = ({
           <TableBody>
             {relevantSizes.map(size => (
               <TableRow key={size.id}>
-                <TableCell className="font-medium">
+                <TableCell className="font-medium whitespace-nowrap sticky left-0 z-10 bg-white shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                   {size.name}<br />
-                  <span className="text-xs text-gray-500">{size.description}</span>
-                </TableCell>
+                  <span className="text-xs text-gray-500">{size.description}</span>                </TableCell>
                 {GSM_OPTIONS.map(gsm => {
                   const key = `${size.id}-${gsm}`;
                   const cost = matrixValues[key] || 0;
@@ -95,7 +93,7 @@ const PaperMatrixSelector: React.FC<PaperMatrixSelectorProps> = ({
                   return (
                     <TableCell 
                       key={gsm} 
-                      className={`text-center cursor-pointer hover:bg-gray-200 ${
+                      className={`text-center cursor-pointer hover:bg-gray-200 min-w-[100px] ${
                         isSelected ? 'bg-blue-100 font-bold' : ''
                       }`}
                       onClick={() => handleCellClick(gsm, size.id)}
