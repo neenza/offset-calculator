@@ -35,13 +35,15 @@ import CostBreakdown from './CostBreakdown';
 interface JobDetailsFormProps {
   job: PrintingJob;
   onJobChange: (job: PrintingJob) => void;
+  hideCostBreakdown?: boolean; // New prop to control visibility of cost breakdown section
 }
 
-const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange }) => {
-  const [openSections, setOpenSections] = useState<string[]>([
-    "printing-specs",
-    "cost-breakdown"
-  ]);
+const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideCostBreakdown = false }) => {
+  // Initialize with cost-breakdown only if it's not hidden
+  const initialOpenSections = ["printing-specs"];
+  if (!hideCostBreakdown) initialOpenSections.push("cost-breakdown");
+  
+  const [openSections, setOpenSections] = useState<string[]>(initialOpenSections);
   
   // Add states to track dropdown values
   const [paperTypeKey, setPaperTypeKey] = useState<number>(0);
@@ -730,14 +732,16 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange }) => 
         </AccordionItem>
 
         {/* Cost Breakdown */}
-        <AccordionItem value="cost-breakdown" className="mt-4">
-          <AccordionTrigger className="bg-gray-200 hover:bg-gray-300 rounded-t-md px-4 py-2 text-print-blue font-medium transition-colors">
-            Cost Breakdown
-          </AccordionTrigger>
-          <AccordionContent className="bg-gray-100 p-4 border border-gray-200 rounded-b-md shadow-inner">
-            <CostBreakdown job={job} />
-          </AccordionContent>
-        </AccordionItem>
+        {!hideCostBreakdown && (
+          <AccordionItem value="cost-breakdown" className="mt-4">
+            <AccordionTrigger className="bg-gray-200 hover:bg-gray-300 rounded-t-md px-4 py-2 text-print-blue font-medium transition-colors">
+              Cost Breakdown
+            </AccordionTrigger>
+            <AccordionContent className="bg-gray-100 p-4 border border-gray-200 rounded-b-md shadow-inner">
+              <CostBreakdown job={job} />
+            </AccordionContent>
+          </AccordionItem>
+        )}
       </Accordion>
     </div>
   );
