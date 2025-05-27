@@ -3,7 +3,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { SHEET_SIZES } from "@/data/printingOptions";
 import { GSM_OPTIONS, calculateCostPerSheet } from "@/data/paperMatrix";
-import { formatCurrency } from "@/utils/calculatorUtils";
+import { formatCurrency, formatSheetSizeDescription } from "@/utils/calculatorUtils";
+import { useSettingsStore } from '@/utils/settingsStore';
 
 interface PaperMatrixSelectorProps {
   selectedGsm: number | undefined;
@@ -30,6 +31,7 @@ const PaperMatrixSelector: React.FC<PaperMatrixSelectorProps> = ({
 }) => {
   const [matrixValues, setMatrixValues] = useState<{[key: string]: number}>({});
   const [highlightedCell, setHighlightedCell] = useState<string | null>(null);
+  const { measurementUnit } = useSettingsStore();
   
   // Filter out 'custom' size for the matrix
   const relevantSizes = SHEET_SIZES.filter(size => size.id !== 'custom');
@@ -146,10 +148,11 @@ const PaperMatrixSelector: React.FC<PaperMatrixSelectorProps> = ({
           </TableHeader>
           <TableBody>
             {relevantSizes.map(size => (
-              <TableRow key={size.id}>
-                <TableCell className="font-medium whitespace-nowrap sticky left-0 z-10 bg-white shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
+              <TableRow key={size.id}>                <TableCell className="font-medium whitespace-nowrap sticky left-0 z-10 bg-white shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                   {size.name}<br />
-                  <span className="text-xs text-gray-500">{size.description}</span>
+                  <span className="text-xs text-gray-500">
+                    {formatSheetSizeDescription(size.width, size.height, measurementUnit)}
+                  </span>
                 </TableCell>
                 {GSM_OPTIONS.map(gsm => {
                   const key = `${size.id}-${gsm}`;

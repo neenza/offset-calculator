@@ -29,6 +29,7 @@ import { PrintingJob } from "@/models/PrintingJob";
 import { SHEET_SIZES } from "@/data/printingOptions";
 import { GSM_OPTIONS } from "@/data/paperMatrix";
 import { useSettingsStore } from '@/utils/settingsStore';
+import { formatSheetSizeDescription, formatMeasurement } from '@/utils/calculatorUtils';
 import PaperMatrixSelector from './PaperMatrixSelector';
 import CostBreakdown from './CostBreakdown';
 
@@ -42,14 +43,13 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
   // Initialize with cost-breakdown only if it's not hidden
   const initialOpenSections = ["printing-specs"];
   if (!hideCostBreakdown) initialOpenSections.push("cost-breakdown");
-  
-  const [openSections, setOpenSections] = useState<string[]>(initialOpenSections);
+    const [openSections, setOpenSections] = useState<string[]>(initialOpenSections);
   
   // Add states to track dropdown values
   const [paperTypeKey, setPaperTypeKey] = useState<number>(0);
   const [sheetSizeKey, setSheetSizeKey] = useState<number>(0);
 
-  const { paperTypes, bindingOptions } = useSettingsStore();
+  const { paperTypes, bindingOptions, measurementUnit } = useSettingsStore();
   // Force re-render of dropdowns when job values change from matrix
   useEffect(() => {
     // When paperTypeId changes externally (via matrix), increment key to force Select component refresh
@@ -215,19 +215,18 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select sheet size" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SHEET_SIZES.map(size => (
+                  </SelectTrigger>                  <SelectContent>                    {SHEET_SIZES.map(size => (
                       <SelectItem key={size.id} value={size.id}>
-                        {size.name} - {size.description}
+                        {size.name} - {formatSheetSizeDescription(size.width, size.height, measurementUnit)}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>{job.sheetSizeId === 'custom' && (
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label htmlFor="customWidth" className="text-sm font-medium">Width (mm)</label>
+                  <div className="space-y-2">                    <label htmlFor="customWidth" className="text-sm font-medium">
+                      Width ({measurementUnit === 'mm' ? 'mm' : 'in'})
+                    </label>
                     <Input 
                       id="customWidth" 
                       type="number" 
@@ -235,8 +234,9 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
                       onChange={(e) => handleNumberInputChange('customSheetWidth', e.target.value)}
                     />
                   </div>
-                  <div className="space-y-2">
-                    <label htmlFor="customHeight" className="text-sm font-medium">Height (mm)</label>
+                  <div className="space-y-2">                    <label htmlFor="customHeight" className="text-sm font-medium">
+                      Height ({measurementUnit === 'mm' ? 'mm' : 'in'})
+                    </label>
                     <Input 
                       id="customHeight" 
                       type="number" 

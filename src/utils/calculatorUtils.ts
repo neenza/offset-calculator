@@ -3,6 +3,28 @@ import { SHEET_SIZES } from "../data/printingOptions";
 import { useSettingsStore } from "../utils/settingsStore";
 import { calculateCostPerSheet } from "../data/paperMatrix";
 
+// Convert millimeters to inches
+export function mmToInch(mm: number): number {
+  return mm / 25.4; // 1 inch = 25.4 mm
+}
+
+// Format measurements based on the unit preference
+export function formatMeasurement(value: number, unit: 'mm' | 'inch'): string {
+  if (unit === 'inch') {
+    const inches = mmToInch(value);
+    return `${inches.toFixed(2)}`;
+  }
+  return `${value}mm`;
+}
+
+// Format sheet size description based on the unit preference
+export function formatSheetSizeDescription(width: number, height: number, unit: 'mm' | 'inch'): string {
+  if (unit === 'inch') {
+    return `${mmToInch(width).toFixed(2)}" × ${mmToInch(height).toFixed(2)}"`;
+  }
+  return `${width}mm × ${height}mm`;
+}
+
 export function calculateTotalCost(job: PrintingJob): CostBreakdown {
   // Get current settings from the store
   const { paperTypes, bindingOptions } = useSettingsStore.getState();
