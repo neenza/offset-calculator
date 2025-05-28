@@ -85,8 +85,15 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
   };
 
   const handleNumberInputChange = (field: keyof PrintingJob, value: string) => {
-    const numberValue = value === '' ? 0 : parseFloat(value);
-    handleInputChange(field, numberValue);
+    if (value.trim() === '') {
+      handleInputChange(field, 0); // Set to 0 if input is cleared
+    } else {
+      const numberValue = parseFloat(value);
+      if (!isNaN(numberValue)) {
+        handleInputChange(field, numberValue);
+      }
+      // If not a valid number and not empty, do nothing, let input show invalid entry
+    }
   };
 
   const handleBindingOptionChange = (value: string) => {
@@ -170,7 +177,7 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
                 id="quantity" 
                 type="number" 
                 min="1"
-                value={job.quantity}
+                value={String(job.quantity)} // Changed
                 onChange={(e) => handleNumberInputChange('quantity', e.target.value)}
                 className="bg-white"
               />
@@ -451,7 +458,7 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
                         type="number"
                         min="0.1"
                         step="0.1"
-                        value={job.paperCostIncreasePerGsm || 0.5}
+                        value={String(job.paperCostIncreasePerGsm || 0.5)} // Changed
                         onChange={(e) => handleNumberInputChange(
                           'paperCostIncreasePerGsm', 
                           e.target.value
@@ -531,7 +538,7 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
                   type="number"
                   min="0"
                   step="0.01"
-                  value={job.designSetupFee}
+                  value={String(job.designSetupFee)} // Changed
                   onChange={(e) => handleNumberInputChange('designSetupFee', e.target.value)}
                 />
               </div>
@@ -542,7 +549,7 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
                   type="number"
                   min="0"
                   step="0.01"
-                  value={job.plateCost}
+                  value={String(job.plateCost)} // Changed
                   onChange={(e) => handleNumberInputChange('plateCost', e.target.value)}
                 />
               </div>
@@ -553,7 +560,7 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
                   type="number"
                   min="0"
                   step="0.01"
-                  value={job.proofingCharges}
+                  value={String(job.proofingCharges)} // Changed
                   onChange={(e) => handleNumberInputChange('proofingCharges', e.target.value)}
                 />
               </div>
@@ -575,7 +582,7 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
                   type="number"
                   min="0"
                   step="0.01"
-                  value={job.pressHourlyRate}
+                  value={String(job.pressHourlyRate)} // Changed
                   onChange={(e) => handleNumberInputChange('pressHourlyRate', e.target.value)}
                 />
               </div>
@@ -588,7 +595,7 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
                   type="number"
                   min="0"
                   step="0.1"
-                  value={job.estimatedPrintRunTime}
+                  value={String(job.estimatedPrintRunTime)} // Changed
                   onChange={(e) => handleNumberInputChange('estimatedPrintRunTime', e.target.value)}
                 />
               </div>
@@ -599,7 +606,7 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
                   type="number"
                   min="0"
                   step="0.1"
-                  value={job.makeReadyTime}
+                  value={String(job.makeReadyTime)} // Changed
                   onChange={(e) => handleNumberInputChange('makeReadyTime', e.target.value)}
                 />
               </div>
@@ -645,7 +652,7 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
                       type="number"
                       min="1"
                       max="4"
-                      value={job.numberOfFolds || 0}
+                      value={String(job.numberOfFolds || 0)} // Changed
                       onChange={(e) => handleNumberInputChange('numberOfFolds', e.target.value)}
                     />
                   </div>
@@ -669,7 +676,7 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
                       id="numberOfCuts" 
                       type="number"
                       min="1"
-                      value={job.numberOfCuts || 0}
+                      value={String(job.numberOfCuts || 0)} // Changed
                       onChange={(e) => handleNumberInputChange('numberOfCuts', e.target.value)}
                     />
                   </div>
@@ -756,7 +763,7 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
                   type="number"
                   min="0"
                   step="0.01"
-                  value={job.packagingDeliveryCost || 0}
+                  value={String(job.packagingDeliveryCost || 0)} // Changed
                   onChange={(e) => handleNumberInputChange('packagingDeliveryCost', e.target.value)}
                 />
               </div>
