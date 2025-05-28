@@ -54,6 +54,8 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
   const [customWidthDisplay, setCustomWidthDisplay] = useState<string>("");
   const [customHeightDisplay, setCustomHeightDisplay] = useState<string>("");
   const [showPaperMatrix, setShowPaperMatrix] = useState<boolean>(false); // New state for matrix visibility
+  const [isWidthFocused, setIsWidthFocused] = useState(false);
+  const [isHeightFocused, setIsHeightFocused] = useState(false);
 
   const { paperTypes, bindingOptions, measurementUnit, gsmOptions } = useSettingsStore(); // Added gsmOptions from store
 
@@ -142,19 +144,68 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
   // Effect to update display values when job properties or measurement unit change
   useEffect(() => {
     if (job.sheetSizeId === 'custom') {
-      if (measurementUnit === 'mm') {
-        setCustomWidthDisplay(job.customSheetWidth != null ? String(job.customSheetWidth) : '');
-        setCustomHeightDisplay(job.customSheetHeight != null ? String(job.customSheetHeight) : '');
-      } else { // inch
-        setCustomWidthDisplay(job.customSheetWidth != null ? (job.customSheetWidth / 25.4).toFixed(2) : '');
-        setCustomHeightDisplay(job.customSheetHeight != null ? (job.customSheetHeight / 25.4).toFixed(2) : '');
+      // Width
+      if (job.customSheetWidth != null) {
+        let newDisplayWidth: string;
+        if (measurementUnit === 'mm') {
+          newDisplayWidth = String(job.customSheetWidth === 0 && isWidthFocused && customWidthDisplay === "0" ? "0" : job.customSheetWidth);
+        } else { // inch
+          const inchValue = job.customSheetWidth / 25.4;
+          if (isWidthFocused) {
+            const currentTypedInches = parseFloat(customWidthDisplay);
+            if (customWidthDisplay && !isNaN(currentTypedInches) && Math.abs(currentTypedInches - inchValue) < 1e-7 && customWidthDisplay !== "0") {
+              newDisplayWidth = customWidthDisplay;
+            } else if (customWidthDisplay && customWidthDisplay.endsWith('.') && !isNaN(parseFloat(customWidthDisplay.slice(0, -1))) && Math.abs(parseFloat(customWidthDisplay.slice(0,-1)) - inchValue) < 1e-7) {
+              newDisplayWidth = customWidthDisplay;
+            } else if (job.customSheetWidth === 0 && customWidthDisplay === "0") {
+              newDisplayWidth = "0"; // Keep "0" if that's what is typed and value is 0
+            } else {
+              newDisplayWidth = String(inchValue); // Show full precision or allow further typing
+            }
+          } else {
+            newDisplayWidth = inchValue.toFixed(2); // Format on blur/external change
+          }
+        }
+        if (customWidthDisplay !== newDisplayWidth) {
+          setCustomWidthDisplay(newDisplayWidth);
+        }
+      } else {
+        if (customWidthDisplay !== '') setCustomWidthDisplay('');
+      }
+
+      // Height
+      if (job.customSheetHeight != null) {
+        let newDisplayHeight: string;
+        if (measurementUnit === 'mm') {
+          newDisplayHeight = String(job.customSheetHeight === 0 && isHeightFocused && customHeightDisplay === "0" ? "0" : job.customSheetHeight);
+        } else { // inch
+          const inchValue = job.customSheetHeight / 25.4;
+          if (isHeightFocused) {
+            const currentTypedInches = parseFloat(customHeightDisplay);
+            if (customHeightDisplay && !isNaN(currentTypedInches) && Math.abs(currentTypedInches - inchValue) < 1e-7 && customHeightDisplay !== "0") {
+              newDisplayHeight = customHeightDisplay;
+            } else if (customHeightDisplay && customHeightDisplay.endsWith('.') && !isNaN(parseFloat(customHeightDisplay.slice(0, -1))) && Math.abs(parseFloat(customHeightDisplay.slice(0,-1)) - inchValue) < 1e-7) {
+                newDisplayHeight = customHeightDisplay;
+            } else if (job.customSheetHeight === 0 && customHeightDisplay === "0") {
+              newDisplayHeight = "0"; // Keep "0" if that's what is typed and value is 0
+            } else {
+              newDisplayHeight = String(inchValue);
+            }
+          } else {
+            newDisplayHeight = inchValue.toFixed(2);
+          }
+        }
+        if (customHeightDisplay !== newDisplayHeight) {
+          setCustomHeightDisplay(newDisplayHeight);
+        }
+      } else {
+        if (customHeightDisplay !== '') setCustomHeightDisplay('');
       }
     } else {
-      // Clear display values if not in custom mode (optional, as inputs won't be visible)
-      setCustomWidthDisplay('');
-      setCustomHeightDisplay('');
+      if (customWidthDisplay !== '') setCustomWidthDisplay('');
+      if (customHeightDisplay !== '') setCustomHeightDisplay('');
     }
-  }, [job.customSheetWidth, job.customSheetHeight, measurementUnit, job.sheetSizeId]);
+  }, [job.customSheetWidth, job.customSheetHeight, measurementUnit, job.sheetSizeId, isWidthFocused, isHeightFocused, customWidthDisplay, customHeightDisplay]);
 
   const handleCustomGsmCostChange = (gsm: string, value: string) => {
     const cost = parseFloat(value);
@@ -288,6 +339,14 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
                     </label>                    <Input 
                       id="customWidth" 
                       type="number"                      value={customWidthDisplay}
+                      onFocus={() => setIsWidthFocused(true)}
+                      onBlur={() => {
+                        setIsWidthFocused(false);
+                        // Explicitly re-format on blur to apply toFixed(2) if needed
+                        if (job.sheetSizeId === 'custom' && job.customSheetWidth != null && measurementUnit === 'inch') {
+                          setCustomWidthDisplay((job.customSheetWidth / 25.4).toFixed(2));
+                        }
+                      }}
                       onChange={(e) => {
                         const userInput = e.target.value;
                         setCustomWidthDisplay(userInput); // Update display immediately
@@ -298,6 +357,7 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
                         } else {
                           const parsedValue = parseFloat(userInput);
                           if (!isNaN(parsedValue)) {
+                            // Convert to mm without intermediate rounding of the parsed inch value
                             newMmWidth = measurementUnit === 'inch'
                               ? parsedValue * 25.4
                               : parsedValue;
@@ -321,6 +381,14 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
                     <Input 
                       id="customHeight" 
                       type="number"                      value={customHeightDisplay}
+                      onFocus={() => setIsHeightFocused(true)}
+                      onBlur={() => {
+                        setIsHeightFocused(false);
+                        // Explicitly re-format on blur
+                        if (job.sheetSizeId === 'custom' && job.customSheetHeight != null && measurementUnit === 'inch') {
+                          setCustomHeightDisplay((job.customSheetHeight / 25.4).toFixed(2));
+                        }
+                      }}
                       onChange={(e) => {
                         const userInput = e.target.value;
                         setCustomHeightDisplay(userInput); // Update display immediately
@@ -331,6 +399,7 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
                         } else {
                           const parsedValue = parseFloat(userInput);
                           if (!isNaN(parsedValue)) {
+                            // Convert to mm without intermediate rounding of the parsed inch value
                             newMmHeight = measurementUnit === 'inch'
                               ? parsedValue * 25.4
                               : parsedValue;
