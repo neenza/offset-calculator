@@ -42,13 +42,29 @@ export function calculateTotalCost(job: PrintingJob): CostBreakdown {
   // Calculate material cost
   const sheetsNeeded = job.quantity * (job.isDoubleSided ? 1 : 1) * (1 + job.wastagePercentage / 100);
   console.log("Sheets Needed: ", sheetsNeeded);
-  
-  // Get cost per sheet - either from the matrix calculation or from the paper type
+    // Get cost per sheet - either from the matrix calculation or from the paper type
   let costPerSheet = selectedPaper ? selectedPaper.costPerSheet : 0;
     // If we have matrix values, use those for a more accurate calculation
-  if (job.paperGsm && job.paperSizeId) {
-    const selectedSize = SHEET_SIZES.find(size => size.id === job.paperSizeId);
-    if (selectedSize) {
+  if (job.paperGsm) {
+    let width, height;
+    
+    // Handle custom sheet size
+    if (job.sheetSizeId === 'custom' && job.customSheetWidth && job.customSheetHeight) {
+      width = job.customSheetWidth;
+      height = job.customSheetHeight;
+      console.log(`Using custom sheet size: ${width} × ${height}`);
+    } 
+    // Handle standard sheet size
+    else if (job.paperSizeId) {
+      const selectedSize = SHEET_SIZES.find(size => size.id === job.paperSizeId);
+      if (selectedSize) {
+        width = selectedSize.width;
+        height = selectedSize.height;
+      }
+    }
+    
+    // If we have valid dimensions, calculate the cost
+    if (width && height) {
       // Make sure we have the required parameters based on the pricing mode
       const hasValidParams = (
         (job.gsmPriceMode === 'flat' && job.paperCostPerKg) ||
@@ -58,8 +74,8 @@ export function calculateTotalCost(job: PrintingJob): CostBreakdown {
 
       if (hasValidParams) {
         costPerSheet = calculateCostPerSheet(
-          selectedSize.width,
-          selectedSize.height,
+          width,
+          height,
           job.paperGsm,
           job.paperCostPerKg || 150, // Default if not provided
           job.gsmPriceMode,

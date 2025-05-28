@@ -61,6 +61,12 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
     setSheetSizeKey(prev => prev + 1);
   }, [job.sheetSizeId, job.paperSizeId]);
 
+  // Force re-render when measurement unit changes
+  useEffect(() => {
+    // This will force a re-render of inputs when measurement unit changes
+    setSheetSizeKey(prev => prev + 1);
+  }, [measurementUnit]);
+
   const handleInputChange = (field: keyof PrintingJob, value: any) => {
     // Only update if value has actually changed
     if (job[field] !== value) {
@@ -194,10 +200,23 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
                 <label htmlFor="sheetSize" className="text-sm font-medium">Sheet Size</label>                <Select 
                   key={`sheet-size-${sheetSizeKey}`}
                   value={job.sheetSizeId || ""} 
-                  onValueChange={(value) => {
-                    // Update the sheet size
+                  onValueChange={(value) => {                    // Update the sheet size
                     if (value === 'custom') {
-                      handleInputChange('sheetSizeId', value);
+                      // When selecting custom, we need to also update paperSizeId
+                      // and ensure we have some default dimensions
+                      const updates: Partial<PrintingJob> = {
+                        sheetSizeId: value,
+                        paperSizeId: value,
+                        // Set default dimensions if not already set
+                        customSheetWidth: job.customSheetWidth || 210, // A4 width as default
+                        customSheetHeight: job.customSheetHeight || 297 // A4 height as default
+                      };
+                      
+                      onJobChange({
+                        ...job,
+                        ...updates
+                      });
+                      console.log(`Sheet size dropdown: updated to custom size`);
                     } else {
                       // Batch updates for better synchronization
                       const updates: Partial<PrintingJob> = {
@@ -226,12 +245,25 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">                    <label htmlFor="customWidth" className="text-sm font-medium">
                       Width ({measurementUnit === 'mm' ? 'mm' : 'in'})
-                    </label>
-                    <Input 
+                    </label>                    <Input 
                       id="customWidth" 
-                      type="number" 
-                      value={job.customSheetWidth || ''}
-                      onChange={(e) => handleNumberInputChange('customSheetWidth', e.target.value)}
+                      type="number"                      value={measurementUnit === 'inch' && job.customSheetWidth 
+                        ? (job.customSheetWidth / 25.4).toFixed(2)
+                        : job.customSheetWidth || ''}
+                      onChange={(e) => {
+                        // Convert to mm if in inches
+                        const width = measurementUnit === 'inch' 
+                          ? parseFloat(e.target.value) * 25.4 
+                          : parseFloat(e.target.value);
+                        
+                        // Ensure both dimensions are updated to refresh cost calculations
+                        onJobChange({
+                          ...job,
+                          customSheetWidth: width || 0,
+                          // Ensure paperSizeId matches the custom setting
+                          paperSizeId: 'custom'
+                        });
+                      }}
                     />
                   </div>
                   <div className="space-y-2">                    <label htmlFor="customHeight" className="text-sm font-medium">
@@ -239,9 +271,23 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
                     </label>
                     <Input 
                       id="customHeight" 
-                      type="number" 
-                      value={job.customSheetHeight || ''}
-                      onChange={(e) => handleNumberInputChange('customSheetHeight', e.target.value)}
+                      type="number"                      value={measurementUnit === 'inch' && job.customSheetHeight 
+                        ? (job.customSheetHeight / 25.4).toFixed(2)
+                        : job.customSheetHeight || ''}
+                      onChange={(e) => {
+                        // Convert to mm if in inches
+                        const height = measurementUnit === 'inch' 
+                          ? parseFloat(e.target.value) * 25.4 
+                          : parseFloat(e.target.value);
+                        
+                        // Ensure both dimensions are updated to refresh cost calculations
+                        onJobChange({
+                          ...job,
+                          customSheetHeight: height || 0,
+                          // Ensure paperSizeId matches the custom setting
+                          paperSizeId: 'custom'
+                        });
+                      }}
                     />
                   </div>
                 </div>              )}                {/* Paper Selection (Split into Material Type and GSM) */}
