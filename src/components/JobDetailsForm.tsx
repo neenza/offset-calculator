@@ -75,14 +75,13 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
   useEffect(() => {
     // This will force a re-render of inputs when measurement unit changes
     setSheetSizeKey(prev => prev + 1);
-  }, [measurementUnit]);
-  // Initialize custom tax state based on job.taxPercentage
+  }, [measurementUnit]);  // Initialize custom tax state based on job.taxPercentage
   useEffect(() => {
     // Check if current tax percentage is one of our fixed options
     if ([5, 12, 18].includes(job.taxPercentage)) {
       setIsCustomTaxSelected(false);
     } else {
-      setIsCustomTaxSelected(true);
+      setIsCustomTaxSelected(false); // Don't automatically focus the custom input on load
       setCustomTaxValue(job.taxPercentage.toString());
     }
   }, []); // Run once on component mount
@@ -887,93 +886,64 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
           </AccordionTrigger>
           <AccordionContent className="bg-gray-100 p-4 border border-gray-200 rounded-b-md shadow-inner">
             <div className="space-y-4">              <div className="space-y-2">
-                <label className="text-sm font-medium">Tax Rate (%)</label>
-                <div className="mt-2">
-                  <RadioGroup 
-                    value={isCustomTaxSelected ? 'custom' : job.taxPercentage.toString()}
-                    onValueChange={(value) => {
-                      if (value === 'custom') {
-                        setIsCustomTaxSelected(true);
-                        // If we're switching to custom, initialize with current tax value
-                        setCustomTaxValue(job.taxPercentage.toString());
-                      } else {
-                        setIsCustomTaxSelected(false);
-                        const taxValue = parseFloat(value);
-                        if (!isNaN(taxValue)) {
-                          handleInputChange('taxPercentage', taxValue);
-                        }
-                      }
-                    }}
-                    className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-2"
-                  >
-                    <div>
-                      <RadioGroupItem value="5" id="tax-5" className="sr-only" />
-                      <label
-                        htmlFor="tax-5"
-                        className={`flex flex-col items-center justify-between rounded-md border-2 border-gray-200 bg-white p-4 hover:bg-gray-50 
-                          ${!isCustomTaxSelected && job.taxPercentage === 5 ? 'border-print-blue' : ''}`}
-                      >
-                        <span className="text-sm font-medium">5%</span>
-                      </label>
+                <label className="text-sm font-medium">Tax Rate (%)</label>                <div className="mt-2">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-2">
+                    <div 
+                      onClick={() => handleInputChange('taxPercentage', 5)}
+                      className={`flex flex-col items-center justify-between rounded-md border-2 border-gray-200 bg-white p-4 hover:bg-gray-50 cursor-pointer
+                        ${job.taxPercentage === 5 ? 'border-print-blue' : ''}`}
+                    >
+                      <span className="text-sm font-medium">5%</span>
                     </div>
 
-                    <div>
-                      <RadioGroupItem value="12" id="tax-12" className="sr-only" />
-                      <label
-                        htmlFor="tax-12"
-                        className={`flex flex-col items-center justify-between rounded-md border-2 border-gray-200 bg-white p-4 hover:bg-gray-50 
-                          ${!isCustomTaxSelected && job.taxPercentage === 12 ? 'border-print-blue' : ''}`}
-                      >
-                        <span className="text-sm font-medium">12%</span>
-                      </label>
+                    <div 
+                      onClick={() => handleInputChange('taxPercentage', 12)}
+                      className={`flex flex-col items-center justify-between rounded-md border-2 border-gray-200 bg-white p-4 hover:bg-gray-50 cursor-pointer
+                        ${job.taxPercentage === 12 ? 'border-print-blue' : ''}`}
+                    >
+                      <span className="text-sm font-medium">12%</span>
                     </div>
 
-                    <div>
-                      <RadioGroupItem value="18" id="tax-18" className="sr-only" />
-                      <label
-                        htmlFor="tax-18"
-                        className={`flex flex-col items-center justify-between rounded-md border-2 border-gray-200 bg-white p-4 hover:bg-gray-50 
-                          ${!isCustomTaxSelected && job.taxPercentage === 18 ? 'border-print-blue' : ''}`}
-                      >
-                        <span className="text-sm font-medium">18%</span>
-                      </label>
+                    <div 
+                      onClick={() => handleInputChange('taxPercentage', 18)}
+                      className={`flex flex-col items-center justify-between rounded-md border-2 border-gray-200 bg-white p-4 hover:bg-gray-50 cursor-pointer
+                        ${job.taxPercentage === 18 ? 'border-print-blue' : ''}`}
+                    >
+                      <span className="text-sm font-medium">18%</span>
                     </div>
 
-                    <div>
-                      <RadioGroupItem value="custom" id="tax-custom" className="sr-only" />
-                      <label
-                        htmlFor="tax-custom"
-                        className={`flex flex-col items-center justify-between rounded-md border-2 border-gray-200 bg-white p-4 hover:bg-gray-50 
-                          ${isCustomTaxSelected ? 'border-print-blue' : ''}`}
-                      >
-                        <span className="text-sm font-medium">Custom</span>
-                      </label>
+                    <div 
+                      onClick={() => setIsCustomTaxSelected(true)}
+                      className={`flex flex-col items-center justify-between rounded-md border-2 border-gray-200 bg-white p-3 hover:bg-gray-50 cursor-pointer
+                        ${![5, 12, 18].includes(job.taxPercentage) ? 'border-print-blue' : ''}`}
+                    >
+                      {isCustomTaxSelected ? (
+                        <Input 
+                          type="number" 
+                          min="0" 
+                          max="100" 
+                          step="0.5"
+                          value={customTaxValue}
+                          onClick={(e) => e.stopPropagation()}
+                          onFocus={() => setIsCustomTaxSelected(true)}
+                          onChange={(e) => {
+                            const newValue = e.target.value;
+                            setCustomTaxValue(newValue);
+                            
+                            const taxValue = parseFloat(newValue);
+                            if (!isNaN(taxValue)) {
+                              handleInputChange('taxPercentage', taxValue);
+                            }
+                          }}
+                          className="w-full text-center"
+                          autoFocus
+                        />
+                      ) : (
+                        <span className="text-sm font-medium">{job.taxPercentage}%</span>
+                      )}
                     </div>
-                  </RadioGroup>
+                  </div>
                   
-                  {isCustomTaxSelected && (
-                    <div className="mt-3">
-                      <Input 
-                        type="number" 
-                        min="0" 
-                        max="100" 
-                        step="0.5"
-                        value={customTaxValue}
-                        onChange={(e) => {
-                          const newValue = e.target.value;
-                          setCustomTaxValue(newValue);
-                          
-                          const taxValue = parseFloat(newValue);
-                          if (!isNaN(taxValue)) {
-                            handleInputChange('taxPercentage', taxValue);
-                          }
-                        }}
-                        className="max-w-[100px]"
-                      />
-                      <div className="text-xs text-gray-500 mt-1">Enter custom tax rate percentage</div>
-                    </div>
-                  )}
-
                   <div className="text-right text-sm mt-3">Current tax rate: {job.taxPercentage}%</div>
                 </div>
               </div>
