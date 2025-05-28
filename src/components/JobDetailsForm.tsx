@@ -25,6 +25,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Button } from "@/components/ui/button"; // Added Button import
 import { PrintingJob } from "@/models/PrintingJob";
 import { SHEET_SIZES } from "@/data/printingOptions";
 import { GSM_OPTIONS } from "@/data/paperMatrix";
@@ -52,8 +53,10 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
   // Local state for custom width and height input display values
   const [customWidthDisplay, setCustomWidthDisplay] = useState<string>("");
   const [customHeightDisplay, setCustomHeightDisplay] = useState<string>("");
+  const [showPaperMatrix, setShowPaperMatrix] = useState<boolean>(false); // New state for matrix visibility
 
-  const { paperTypes, bindingOptions, measurementUnit } = useSettingsStore();
+  const { paperTypes, bindingOptions, measurementUnit, gsmOptions } = useSettingsStore(); // Added gsmOptions from store
+
   // Force re-render of dropdowns when job values change from matrix
   useEffect(() => {
     // When paperTypeId changes externally (via matrix), increment key to force Select component refresh
@@ -152,6 +155,15 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
       setCustomHeightDisplay('');
     }
   }, [job.customSheetWidth, job.customSheetHeight, measurementUnit, job.sheetSizeId]);
+
+  const handleCustomGsmCostChange = (gsm: string, value: string) => {
+    const cost = parseFloat(value);
+    const newCustomCostMatrix = {
+      ...(job.customCostMatrix || {}),
+      [gsm]: isNaN(cost) ? 0 : cost, // Default to 0 if input is not a valid number
+    };
+    handleInputChange('customCostMatrix', newCustomCostMatrix);
+  };
 
   return (
     <div className="space-y-4 mb-16">
@@ -408,118 +420,135 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
                    `${job.paperMaterialType.replace('-', ' ').replace(/\b\w/g, c => c.toUpperCase())} ${job.paperGsm}gsm` : 
                    "Select paper material and GSM, or use the matrix below for precise pricing"}
                 </p>
-              </div>              {/* GSM Price Mode */}
-              <div className="mt-4 pt-4 border-t border-gray-200">
-                <h3 className="text-sm font-medium mb-2">GSM Price Variation Mode</h3>
-                <div className="space-y-3">
-                  <RadioGroup
-                    value={job.gsmPriceMode}
-                    onValueChange={(value: 'flat' | 'slope' | 'custom') => {
-                      handleInputChange('gsmPriceMode', value);
-                    }}
-                    className="flex flex-col space-y-1"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="flat" id="flat-pricing" />
-                      <label htmlFor="flat-pricing" className="text-sm font-medium">
-                        Flat Pricing
-                        <p className="text-xs text-gray-500 mt-0.5">
-                          Cost per kg is the same for all GSM values
-                        </p>
-                      </label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="slope" id="slope-pricing" />
-                      <label htmlFor="slope-pricing" className="text-sm font-medium">
-                        Slope Pricing
-                        <p className="text-xs text-gray-500 mt-0.5">
-                          Cost increases with higher GSM values
-                        </p>
-                      </label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="custom" id="custom-pricing" />
-                      <label htmlFor="custom-pricing" className="text-sm font-medium">
-                        Custom Pricing
-                        <p className="text-xs text-gray-500 mt-0.5">
-                          Set specific cost per kg for each GSM value
-                        </p>
-                      </label>
-                    </div>
-                  </RadioGroup>
-
-                  {job.gsmPriceMode === 'slope' && (
-                    <div className="space-y-2 mt-3 ml-6">
-                      <label htmlFor="paperCostIncreasePerGsm" className="text-sm font-medium">
-                        Cost Increase per GSM (₹)
-                      </label>
-                      <Input
-                        id="paperCostIncreasePerGsm"
-                        type="number"
-                        min="0.1"
-                        step="0.1"
-                        value={String(job.paperCostIncreasePerGsm || 0.5)} // Changed
-                        onChange={(e) => handleNumberInputChange(
-                          'paperCostIncreasePerGsm', 
-                          e.target.value
-                        )}
-                        className="w-32"
-                      />
-                      <p className="text-xs text-gray-500">
-                        Amount to increase cost per kg for each GSM unit above 80gsm
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>              {/* Paper Matrix Selector */}              <div className="mt-4 pt-4 border-t border-gray-200">                <h3 className="text-sm font-medium mb-2">Paper Cost Matrix</h3>                <PaperMatrixSelector 
-                  selectedGsm={job.paperGsm}
-                  selectedSizeId={job.paperSizeId}
-                  costPerKg={job.paperCostPerKg}
-                  gsmPriceMode={job.gsmPriceMode}
-                  paperCostIncreasePerGsm={job.paperCostIncreasePerGsm}
-                  customCostMatrix={job.customCostMatrix}
-                  onCustomCostChange={(gsm, value) => {
-                    // Create a new customCostMatrix with the updated value
-                    const updatedMatrix = { 
-                      ...(job.customCostMatrix || {}), 
-                      [gsm]: value 
-                    };
-                    
-                    // Update the job with the new matrix
-                    handleInputChange('customCostMatrix', updatedMatrix);
-                    console.log(`Updated custom cost for ${gsm} GSM: ${value}`);
-                  }}
-                  onMatrixCellSelected={(gsm, sizeId, costPerSheet) => {
-                    // Create a batch of updates to ensure all changes are applied together
-                    const updates: Partial<PrintingJob> = {};
-                    
-                    // Update matrix-specific fields
-                    updates.paperGsm = gsm;
-                    updates.paperSizeId = sizeId;
-                      // Also update the sheet size dropdown to match
-                    updates.sheetSizeId = sizeId;
-                    
-                    // Use the currently selected paper material type or default to coated-gloss
-                    const paperMaterialType = job.paperMaterialType || 'coated-gloss';
-                    
-                    // Update material type
-                    updates.paperMaterialType = paperMaterialType;
-                    
-                    // Create the combined paperTypeId from material type and GSM
-                    const newPaperTypeId = `${updates.paperMaterialType}-${gsm}`;
-                    updates.paperTypeId = newPaperTypeId;
-                    
-                    // Apply all updates at once
-                    onJobChange({
-                      ...job,
-                      ...updates
-                    });
-                    
-                    console.log(`Matrix selection applied: Size=${sizeId}, GSM=${gsm}, Paper=${updates.paperMaterialType}, Cost=${costPerSheet}`);
-                  }}
-                  onCostPerKgChange={(value) => handleInputChange('paperCostPerKg', value)}
-                />
               </div>
+
+              {/* GSM Price Mode Selection */}
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <label className="text-sm font-medium mb-2 block">Paper Costing Mode</label>
+                <RadioGroup
+                  value={job.gsmPriceMode}
+                  onValueChange={(value: 'flat' | 'custom') => {
+                    // Ensure only 'flat' or 'custom' can be set
+                    if (value === 'flat' || value === 'custom') {
+                        handleInputChange('gsmPriceMode', value);
+                    }
+                  }}
+                  className="flex space-x-2"
+                >
+                  <div className="flex items-center space-x-1">
+                    <RadioGroupItem value="flat" id="flat-pricing" />
+                    <label htmlFor="flat-pricing" className="text-sm font-medium cursor-pointer">Flat</label>
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    <RadioGroupItem value="custom" id="custom-pricing" />
+                    <label htmlFor="custom-pricing" className="text-sm font-medium cursor-pointer">Custom</label>
+                  </div>
+                </RadioGroup>
+                <p className="text-xs text-gray-500 mt-1">
+                  Select 'Flat' for a single cost per Kg, or 'Custom' to set cost per Kg for each GSM.
+                </p>
+              </div>
+
+              {/* Cost per Kg input for Flat mode */}
+              {job.gsmPriceMode === 'flat' && (
+                <div className="mt-4 space-y-2 bg-gray-200 p-3 rounded-md shadow-sm">
+                  <label htmlFor="costPerKgFlat" className="text-sm font-medium">
+                    Cost per Kg (₹)
+                  </label>
+                  <Input 
+                    id="costPerKgFlat" 
+                    type="number" 
+                    min="0" 
+                    step="1" 
+                    value={String(job.paperCostPerKg || '')} 
+                    onChange={(e) => handleNumberInputChange('paperCostPerKg', e.target.value)} 
+                    className="bg-white"
+                  />
+                  <p className="text-xs text-gray-500">
+                    Enter the paper cost per kilogram for all GSM values.
+                  </p>
+                </div>
+              )}
+
+              {/* Custom Cost per GSM inputs for Custom mode */}
+              {job.gsmPriceMode === 'custom' && (
+                <div className="mt-4 space-y-2 bg-gray-200 p-3 rounded-md shadow-sm">
+                  <label className="text-sm font-medium">Custom Cost per Kg by GSM (₹)</label>
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-x-4 gap-y-2 mt-1">
+                    {GSM_OPTIONS.map(gsm => (
+                      <div key={gsm} className="space-y-1">
+                        <label htmlFor={`custom-cost-${gsm}`} className="text-xs font-medium">{gsm} GSM</label>
+                        <Input
+                          id={`custom-cost-${gsm}`}
+                          type="number"
+                          min="0"
+                          step="1"
+                          value={String(job.customCostMatrix?.[gsm.toString()] || '')}
+                          onChange={(e) => handleCustomGsmCostChange(gsm.toString(), e.target.value)}
+                          className="bg-white text-sm h-8 w-full"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Enter the specific cost per kg for each GSM value.
+                  </p>
+                </div>
+              )}
+
+              {/* Paper Matrix Toggle Button */}
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <Button 
+                  variant="outline"
+                  className="w-full text-sm py-2 h-auto bg-gray-50 hover:bg-gray-100 text-print-blue border-gray-300"
+                  onClick={() => setShowPaperMatrix(!showPaperMatrix)}
+                >
+                  {showPaperMatrix ? "Hide Paper Cost Matrix" : "Show Paper Cost Matrix"}
+                </Button>
+              </div>
+
+              {/* Paper Matrix Selector - Conditionally Rendered */} 
+              {showPaperMatrix && (
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <h3 className="text-sm font-medium mb-2">Paper Cost Matrix</h3>
+                  <PaperMatrixSelector 
+                    selectedGsm={job.paperGsm}
+                    selectedSizeId={job.paperSizeId}
+                    costPerKg={job.paperCostPerKg}
+                    gsmPriceMode={job.gsmPriceMode}
+                    paperCostIncreasePerGsm={job.paperCostIncreasePerGsm}
+                    customCostMatrix={job.customCostMatrix}
+                    onMatrixCellSelected={(gsm, sizeId, costPerSheet) => {
+                      // Create a batch of updates to ensure all changes are applied together
+                      const updates: Partial<PrintingJob> = {};
+                      
+                      // Update matrix-specific fields
+                      updates.paperGsm = gsm;
+                      updates.paperSizeId = sizeId;
+                        // Also update the sheet size dropdown to match
+                      updates.sheetSizeId = sizeId;
+                      
+                      // Use the currently selected paper material type or default to coated-gloss
+                      const paperMaterialType = job.paperMaterialType || 'coated-gloss';
+                      
+                      // Update material type
+                      updates.paperMaterialType = paperMaterialType;
+                      
+                      // Create the combined paperTypeId from material type and GSM
+                      const newPaperTypeId = `${updates.paperMaterialType}-${gsm}`;
+                      updates.paperTypeId = newPaperTypeId;
+                      
+                      // Apply all updates at once
+                      onJobChange({
+                        ...job,
+                        ...updates
+                      });
+                      
+                      console.log(`Matrix selection applied: Size=${sizeId}, GSM=${gsm}, Paper=${updates.paperMaterialType}, Cost=${costPerSheet}`);
+                    }}
+                  />
+                </div>
+              )}
             </div>
           </AccordionContent>
         </AccordionItem>
