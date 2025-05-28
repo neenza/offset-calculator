@@ -49,15 +49,16 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
   // Add states to track dropdown values
   const [paperTypeKey, setPaperTypeKey] = useState<number>(0);
   const [sheetSizeKey, setSheetSizeKey] = useState<number>(0);
-
   // Local state for custom width and height input display values
   const [customWidthDisplay, setCustomWidthDisplay] = useState<string>("");
   const [customHeightDisplay, setCustomHeightDisplay] = useState<string>("");
   const [showPaperMatrix, setShowPaperMatrix] = useState<boolean>(false); // New state for matrix visibility
   const [isWidthFocused, setIsWidthFocused] = useState(false);
   const [isHeightFocused, setIsHeightFocused] = useState(false);
+  const [isCustomTaxSelected, setIsCustomTaxSelected] = useState(false);
+  const [customTaxValue, setCustomTaxValue] = useState<string>("");
 
-  const { paperTypes, bindingOptions, measurementUnit, gsmOptions } = useSettingsStore(); // Added gsmOptions from store
+  const { paperTypes, bindingOptions, measurementUnit } = useSettingsStore();
 
   // Force re-render of dropdowns when job values change from matrix
   useEffect(() => {
@@ -75,6 +76,16 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
     // This will force a re-render of inputs when measurement unit changes
     setSheetSizeKey(prev => prev + 1);
   }, [measurementUnit]);
+  // Initialize custom tax state based on job.taxPercentage
+  useEffect(() => {
+    // Check if current tax percentage is one of our fixed options
+    if ([5, 12, 18].includes(job.taxPercentage)) {
+      setIsCustomTaxSelected(false);
+    } else {
+      setIsCustomTaxSelected(true);
+      setCustomTaxValue(job.taxPercentage.toString());
+    }
+  }, []); // Run once on component mount
 
   const handleInputChange = (field: keyof PrintingJob, value: any) => {
     // Only update if value has actually changed
@@ -875,18 +886,95 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
             Additional Costs
           </AccordionTrigger>
           <AccordionContent className="bg-gray-100 p-4 border border-gray-200 rounded-b-md shadow-inner">
-            <div className="space-y-4">
-              <div className="space-y-2">
+            <div className="space-y-4">              <div className="space-y-2">
                 <label className="text-sm font-medium">Tax Rate (%)</label>
-                <div className="pt-2">
-                  <Slider
-                    value={[job.taxPercentage]}
-                    min={0}
-                    max={25}
-                    step={0.5}
-                    onValueChange={(value) => handleInputChange('taxPercentage', value[0])}
-                  />
-                  <div className="text-right text-sm mt-1">{job.taxPercentage}%</div>
+                <div className="mt-2">
+                  <RadioGroup 
+                    value={isCustomTaxSelected ? 'custom' : job.taxPercentage.toString()}
+                    onValueChange={(value) => {
+                      if (value === 'custom') {
+                        setIsCustomTaxSelected(true);
+                        // If we're switching to custom, initialize with current tax value
+                        setCustomTaxValue(job.taxPercentage.toString());
+                      } else {
+                        setIsCustomTaxSelected(false);
+                        const taxValue = parseFloat(value);
+                        if (!isNaN(taxValue)) {
+                          handleInputChange('taxPercentage', taxValue);
+                        }
+                      }
+                    }}
+                    className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-2"
+                  >
+                    <div>
+                      <RadioGroupItem value="5" id="tax-5" className="sr-only" />
+                      <label
+                        htmlFor="tax-5"
+                        className={`flex flex-col items-center justify-between rounded-md border-2 border-gray-200 bg-white p-4 hover:bg-gray-50 
+                          ${!isCustomTaxSelected && job.taxPercentage === 5 ? 'border-print-blue' : ''}`}
+                      >
+                        <span className="text-sm font-medium">5%</span>
+                      </label>
+                    </div>
+
+                    <div>
+                      <RadioGroupItem value="12" id="tax-12" className="sr-only" />
+                      <label
+                        htmlFor="tax-12"
+                        className={`flex flex-col items-center justify-between rounded-md border-2 border-gray-200 bg-white p-4 hover:bg-gray-50 
+                          ${!isCustomTaxSelected && job.taxPercentage === 12 ? 'border-print-blue' : ''}`}
+                      >
+                        <span className="text-sm font-medium">12%</span>
+                      </label>
+                    </div>
+
+                    <div>
+                      <RadioGroupItem value="18" id="tax-18" className="sr-only" />
+                      <label
+                        htmlFor="tax-18"
+                        className={`flex flex-col items-center justify-between rounded-md border-2 border-gray-200 bg-white p-4 hover:bg-gray-50 
+                          ${!isCustomTaxSelected && job.taxPercentage === 18 ? 'border-print-blue' : ''}`}
+                      >
+                        <span className="text-sm font-medium">18%</span>
+                      </label>
+                    </div>
+
+                    <div>
+                      <RadioGroupItem value="custom" id="tax-custom" className="sr-only" />
+                      <label
+                        htmlFor="tax-custom"
+                        className={`flex flex-col items-center justify-between rounded-md border-2 border-gray-200 bg-white p-4 hover:bg-gray-50 
+                          ${isCustomTaxSelected ? 'border-print-blue' : ''}`}
+                      >
+                        <span className="text-sm font-medium">Custom</span>
+                      </label>
+                    </div>
+                  </RadioGroup>
+                  
+                  {isCustomTaxSelected && (
+                    <div className="mt-3">
+                      <Input 
+                        type="number" 
+                        min="0" 
+                        max="100" 
+                        step="0.5"
+                        value={customTaxValue}
+                        onChange={(e) => {
+                          const newValue = e.target.value;
+                          setCustomTaxValue(newValue);
+                          
+                          const taxValue = parseFloat(newValue);
+                          if (!isNaN(taxValue)) {
+                            handleInputChange('taxPercentage', taxValue);
+                          }
+                        }}
+                        className="max-w-[100px]"
+                      />
+                      <div className="text-xs text-gray-500 mt-1">Enter custom tax rate percentage</div>
+                    </div>
+                  )}
+
+                  <div className="text-right text-sm mt-3">Current tax rate: {job.taxPercentage}%</div>
                 </div>
               </div>
               
