@@ -20,10 +20,11 @@ import { useSettingsStore } from '@/utils/settingsStore';
 
 const Settings = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const { 
+  const { toast } = useToast();  const { 
     bindingOptions, 
     setBindingOptions,
+    laminationCosts,
+    setLaminationCosts,
     saveSettings,
     resetSettings,
     loadSettings
@@ -40,6 +41,12 @@ const Settings = () => {
     setBindingOptions(bindingOptions.map(binding => 
       binding.id === bindingId ? { ...binding, [field]: cost } : binding
     ));
+  };
+
+  const handleLaminationCostChange = (type: keyof typeof laminationCosts, newCost: string) => {
+    const cost = parseFloat(newCost) || 0;
+    console.log(`Updating lamination cost for ${type} to: ${cost}`);
+    setLaminationCosts({ [type]: cost });
   };
 
   const handleSave = () => {
@@ -133,6 +140,63 @@ const Settings = () => {
                 </AccordionItem>
               ))}
             </Accordion>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Lamination Costs</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              <p className="text-sm text-gray-500">Set the cost per square meter for different lamination types.</p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Matt Lamination (₹ per sq.m)</label>
+                  <Input 
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={laminationCosts.matt}
+                    onChange={(e) => handleLaminationCostChange('matt', e.target.value)}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Gloss Lamination (₹ per sq.m)</label>
+                  <Input 
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={laminationCosts.gloss}
+                    onChange={(e) => handleLaminationCostChange('gloss', e.target.value)}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Thermal Matt Lamination (₹ per sq.m)</label>
+                  <Input 
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={laminationCosts['thermal-matt']}
+                    onChange={(e) => handleLaminationCostChange('thermal-matt', e.target.value)}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Thermal Gloss Lamination (₹ per sq.m)</label>
+                  <Input 
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={laminationCosts['thermal-gloss']}
+                    onChange={(e) => handleLaminationCostChange('thermal-gloss', e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>

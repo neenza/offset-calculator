@@ -118,12 +118,41 @@ export function calculateTotalCost(job: PrintingJob): CostBreakdown {
   if (selectedBinding) {
     finishingCost += selectedBinding.baseCost + (selectedBinding.perUnitCost * job.quantity);
   }
-  
-  // Lamination (x100 for Rupees)
+    // Lamination (x100 for Rupees)
   if (job.laminationType !== 'none') {
-    const laminationBaseCost = job.laminationType === 'matt' ? 10 : 12; // Changed from 0.1/0.12 to 10/12
+    // Get lamination costs from settings store
+    const { laminationCosts } = useSettingsStore.getState();
+    
+    // Use the appropriate lamination cost based on the type
+    const laminationPerSqMCost = laminationCosts[job.laminationType] || 
+      // Fallbacks in case the settings don't have the value
+      (job.laminationType === 'matt' ? 0.25 : 
+       job.laminationType === 'gloss' ? 0.35 :
+       job.laminationType === 'thermal-matt' ? 0.65 :
+       job.laminationType === 'thermal-gloss' ? 0.65 : 0.35);
+    
     const laminationMultiplier = job.isDoubleSidedLamination ? 2 : 1;
-    finishingCost += laminationBaseCost * job.quantity * laminationMultiplier;
+
+    // Determine sheet dimensions (in mm)
+    let width: number | undefined, height: number | undefined;
+    if (job.sheetSizeId === 'custom' && job.customSheetWidth && job.customSheetHeight) {
+      width = job.customSheetWidth;
+      height = job.customSheetHeight;
+    } else if (job.paperSizeId) {
+      const selectedSize = SHEET_SIZES.find(size => size.id === job.paperSizeId);
+      if (selectedSize) {
+        width = selectedSize.width;
+        height = selectedSize.height;
+      }
+    }
+
+    // Calculate area in m^2
+    let areaInSqM = 0;
+    if (width && height) {
+      areaInSqM = (width / 1000) * (height / 1000);
+    }
+    console.log(`Lamination area: ${areaInSqM} sq m (width: ${width}, height: ${height}), cost per sqm: ${laminationPerSqMCost}`);
+    finishingCost += laminationPerSqMCost * job.quantity * laminationMultiplier * areaInSqM;
   }
   
   // Embossing/Foiling

@@ -66,11 +66,10 @@ export interface PrintingJob {
   
   // Post-Press Costs
   foldingRequired: boolean;
-  numberOfFolds: number;
-  cuttingRequired: boolean;
+  numberOfFolds: number;  cuttingRequired: boolean;
   numberOfCuts: number;
   bindingOptionId: string | null;
-  laminationType: 'none' | 'matt' | 'gloss';
+  laminationType: 'none' | 'matt' | 'gloss' | 'thermal-matt' | 'thermal-gloss';
   isDoubleSidedLamination: boolean;
   embossingRequired: boolean;
   foilingRequired: boolean;

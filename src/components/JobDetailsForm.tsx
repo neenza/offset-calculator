@@ -817,10 +817,9 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
               </div>
               
               <div className="space-y-2">
-                <label htmlFor="laminationType" className="text-sm font-medium">Lamination</label>
-                <Select 
+                <label htmlFor="laminationType" className="text-sm font-medium">Lamination</label>                <Select 
                   value={job.laminationType || 'none'}
-                  onValueChange={(value: 'none' | 'matt' | 'gloss') => handleInputChange('laminationType', value)}
+                  onValueChange={(value: 'none' | 'matt' | 'gloss' | 'thermal-matt' | 'thermal-gloss') => handleInputChange('laminationType', value)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select lamination type" />
@@ -829,6 +828,8 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
                     <SelectItem value="none">None</SelectItem>
                     <SelectItem value="matt">Matt</SelectItem>
                     <SelectItem value="gloss">Gloss</SelectItem>
+                    <SelectItem value="thermal-matt">Thermal Matt</SelectItem>
+                    <SelectItem value="thermal-gloss">Thermal Gloss</SelectItem>
                   </SelectContent>
                 </Select>
                 
