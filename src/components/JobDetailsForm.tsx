@@ -49,6 +49,10 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
   const [paperTypeKey, setPaperTypeKey] = useState<number>(0);
   const [sheetSizeKey, setSheetSizeKey] = useState<number>(0);
 
+  // Local state for custom width and height input display values
+  const [customWidthDisplay, setCustomWidthDisplay] = useState<string>("");
+  const [customHeightDisplay, setCustomHeightDisplay] = useState<string>("");
+
   const { paperTypes, bindingOptions, measurementUnit } = useSettingsStore();
   // Force re-render of dropdowns when job values change from matrix
   useEffect(() => {
@@ -124,6 +128,23 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
       }
     }
   }, [job.paperTypeId]);
+
+  // Effect to update display values when job properties or measurement unit change
+  useEffect(() => {
+    if (job.sheetSizeId === 'custom') {
+      if (measurementUnit === 'mm') {
+        setCustomWidthDisplay(job.customSheetWidth != null ? String(job.customSheetWidth) : '');
+        setCustomHeightDisplay(job.customSheetHeight != null ? String(job.customSheetHeight) : '');
+      } else { // inch
+        setCustomWidthDisplay(job.customSheetWidth != null ? (job.customSheetWidth / 25.4).toFixed(2) : '');
+        setCustomHeightDisplay(job.customSheetHeight != null ? (job.customSheetHeight / 25.4).toFixed(2) : '');
+      }
+    } else {
+      // Clear display values if not in custom mode (optional, as inputs won't be visible)
+      setCustomWidthDisplay('');
+      setCustomHeightDisplay('');
+    }
+  }, [job.customSheetWidth, job.customSheetHeight, measurementUnit, job.sheetSizeId]);
 
   return (
     <div className="space-y-4 mb-16">
@@ -247,21 +268,30 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
                       Width ({measurementUnit === 'mm' ? 'mm' : 'in'})
                     </label>                    <Input 
                       id="customWidth" 
-                      type="number"                      value={measurementUnit === 'inch' && job.customSheetWidth 
-                        ? (job.customSheetWidth / 25.4).toFixed(2)
-                        : job.customSheetWidth || ''}
+                      type="number"                      value={customWidthDisplay}
                       onChange={(e) => {
-                        // Convert to mm if in inches
-                        const width = measurementUnit === 'inch' 
-                          ? parseFloat(e.target.value) * 25.4 
-                          : parseFloat(e.target.value);
-                        
-                        // Ensure both dimensions are updated to refresh cost calculations
+                        const userInput = e.target.value;
+                        setCustomWidthDisplay(userInput); // Update display immediately
+
+                        let newMmWidth: number;
+                        if (userInput.trim() === "") {
+                          newMmWidth = 0; // Default for empty input
+                        } else {
+                          const parsedValue = parseFloat(userInput);
+                          if (!isNaN(parsedValue)) {
+                            newMmWidth = measurementUnit === 'inch'
+                              ? parsedValue * 25.4
+                              : parsedValue;
+                          } else {
+                            // Invalid input, do not update the job's numeric value
+                            return;
+                          }
+                        }
+
                         onJobChange({
                           ...job,
-                          customSheetWidth: width || 0,
-                          // Ensure paperSizeId matches the custom setting
-                          paperSizeId: 'custom'
+                          customSheetWidth: newMmWidth,
+                          paperSizeId: 'custom' // Ensure this is still set
                         });
                       }}
                     />
@@ -271,21 +301,30 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
                     </label>
                     <Input 
                       id="customHeight" 
-                      type="number"                      value={measurementUnit === 'inch' && job.customSheetHeight 
-                        ? (job.customSheetHeight / 25.4).toFixed(2)
-                        : job.customSheetHeight || ''}
+                      type="number"                      value={customHeightDisplay}
                       onChange={(e) => {
-                        // Convert to mm if in inches
-                        const height = measurementUnit === 'inch' 
-                          ? parseFloat(e.target.value) * 25.4 
-                          : parseFloat(e.target.value);
-                        
-                        // Ensure both dimensions are updated to refresh cost calculations
+                        const userInput = e.target.value;
+                        setCustomHeightDisplay(userInput); // Update display immediately
+
+                        let newMmHeight: number;
+                        if (userInput.trim() === "") {
+                          newMmHeight = 0; // Default for empty input
+                        } else {
+                          const parsedValue = parseFloat(userInput);
+                          if (!isNaN(parsedValue)) {
+                            newMmHeight = measurementUnit === 'inch'
+                              ? parsedValue * 25.4
+                              : parsedValue;
+                          } else {
+                            // Invalid input, do not update the job's numeric value
+                            return;
+                          }
+                        }
+
                         onJobChange({
                           ...job,
-                          customSheetHeight: height || 0,
-                          // Ensure paperSizeId matches the custom setting
-                          paperSizeId: 'custom'
+                          customSheetHeight: newMmHeight,
+                          paperSizeId: 'custom' // Ensure this is still set
                         });
                       }}
                     />

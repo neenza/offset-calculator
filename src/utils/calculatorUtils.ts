@@ -48,18 +48,19 @@ export function calculateTotalCost(job: PrintingJob): CostBreakdown {
   if (job.paperGsm) {
     let width, height;
     
-    // Handle custom sheet size
+    // Prioritize custom sheet size if selected
     if (job.sheetSizeId === 'custom' && job.customSheetWidth && job.customSheetHeight) {
       width = job.customSheetWidth;
       height = job.customSheetHeight;
       console.log(`Using custom sheet size: ${width} × ${height}`);
     } 
-    // Handle standard sheet size
+    // Handle standard sheet size if custom is not used or dimensions are missing
     else if (job.paperSizeId) {
       const selectedSize = SHEET_SIZES.find(size => size.id === job.paperSizeId);
       if (selectedSize) {
         width = selectedSize.width;
         height = selectedSize.height;
+        console.log(`Using standard sheet size: ${selectedSize.name} - ${width} × ${height}`);
       }
     }
     
