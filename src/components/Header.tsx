@@ -1,5 +1,5 @@
 import React from 'react';
-import { Printer, Settings, RulerIcon } from 'lucide-react';
+import { Printer, Settings} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';

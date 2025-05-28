@@ -148,7 +148,8 @@ const PaperMatrixSelector: React.FC<PaperMatrixSelectorProps> = ({
           </TableHeader>
           <TableBody>
             {relevantSizes.map(size => (
-              <TableRow key={size.id}>                <TableCell className="font-medium whitespace-nowrap sticky left-0 z-10 bg-white shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
+              <TableRow key={size.id}>
+                <TableCell className="font-medium whitespace-nowrap sticky left-0 z-10 bg-white shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                   {size.name}<br />
                   <span className="text-xs text-gray-500">
                     {formatSheetSizeDescription(size.width, size.height, measurementUnit)}
