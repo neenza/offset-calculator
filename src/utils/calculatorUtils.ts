@@ -147,12 +147,12 @@ export function calculateTotalCost(job: PrintingJob): CostBreakdown {
     }
 
     // Calculate area in m^2
-    let areaInSqM = 0;
+    let areaInSqIn = 0;
     if (width && height) {
-      areaInSqM = (width / 1000) * (height / 1000);
+      areaInSqIn = (width / 25.4) * (height / 25.4);
     }
-    console.log(`Lamination area: ${areaInSqM} sq m (width: ${width}, height: ${height}), cost per sqm: ${laminationPerSqMCost}`);
-    finishingCost += laminationPerSqMCost * job.quantity * laminationMultiplier * areaInSqM;
+    console.log(`Lamination area: ${areaInSqIn} sq in (width: ${width}, height: ${height}), cost per sq in: ${laminationPerSqMCost}`);
+    finishingCost += laminationPerSqMCost * job.quantity * laminationMultiplier * areaInSqIn / 100;
   }
   
   // Embossing/Foiling

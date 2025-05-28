@@ -153,7 +153,7 @@ const Settings = () => {
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Matt Lamination (₹ per sq.m)</label>
+                  <label className="text-sm font-medium">Matt Lamination (₹ per 100 sq.in)</label>
                   <Input 
                     type="number"
                     min="0"
@@ -164,8 +164,8 @@ const Settings = () => {
                 </div>
                 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Gloss Lamination (₹ per sq.m)</label>
-                  <Input 
+                  <label className="text-sm font-medium">Gloss Lamination (₹ per 100 sq.in)</label>
+                  <Input
                     type="number"
                     min="0"
                     step="0.01"
@@ -173,9 +173,9 @@ const Settings = () => {
                     onChange={(e) => handleLaminationCostChange('gloss', e.target.value)}
                   />
                 </div>
-                
+
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Thermal Matt Lamination (₹ per sq.m)</label>
+                  <label className="text-sm font-medium">Thermal Matt Lamination (₹ per 100 sq.in)</label>
                   <Input 
                     type="number"
                     min="0"
@@ -186,8 +186,8 @@ const Settings = () => {
                 </div>
                 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Thermal Gloss Lamination (₹ per sq.m)</label>
-                  <Input 
+                  <label className="text-sm font-medium">Thermal Gloss Lamination (₹ per 100 sq.in)</label>
+                  <Input
                     type="number"
                     min="0"
                     step="0.01"
