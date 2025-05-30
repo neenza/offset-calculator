@@ -682,40 +682,15 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
             Press & Production Costs
           </AccordionTrigger>
           <AccordionContent className="bg-gray-100 p-4 border border-gray-200 rounded-b-md shadow-inner">
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <label htmlFor="pressHourlyRate" className="text-sm font-medium">Press Hourly Rate (₹ per hour)</label>
+            <div className="space-y-4">              <div className="space-y-2">
+                <label htmlFor="fullPrintingCost" className="text-sm font-medium">Printing Cost (₹)</label>
                 <Input 
-                  id="pressHourlyRate" 
+                  id="fullPrintingCost" 
                   type="number"
                   min="0"
                   step="0.01"
-                  value={String(job.pressHourlyRate)} // Changed
-                  onChange={(e) => handleNumberInputChange('pressHourlyRate', e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="estimatedPrintRunTime" className="text-sm font-medium">
-                  Estimated Print Run Time (hours)
-                </label>
-                <Input 
-                  id="estimatedPrintRunTime" 
-                  type="number"
-                  min="0"
-                  step="0.1"
-                  value={String(job.estimatedPrintRunTime)} // Changed
-                  onChange={(e) => handleNumberInputChange('estimatedPrintRunTime', e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="makeReadyTime" className="text-sm font-medium">Make-Ready Time (hours)</label>
-                <Input 
-                  id="makeReadyTime" 
-                  type="number"
-                  min="0"
-                  step="0.1"
-                  value={String(job.makeReadyTime)} // Changed
-                  onChange={(e) => handleNumberInputChange('makeReadyTime', e.target.value)}
+                  value={String(job.fullPrintingCost)} 
+                  onChange={(e) => handleNumberInputChange('fullPrintingCost', e.target.value)}
                 />
               </div>
               <div className="space-y-2">

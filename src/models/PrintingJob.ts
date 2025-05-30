@@ -57,11 +57,8 @@ export interface PrintingJob {
   designSetupFee: number;
   plateCost: number;
   proofingCharges: number;
-  
   // Press & Production Costs
-  pressHourlyRate: number;
-  estimatedPrintRunTime: number;
-  makeReadyTime: number;
+  fullPrintingCost: number;
   wastagePercentage: number;
   
   // Post-Press Costs
@@ -125,10 +122,7 @@ export const DEFAULT_PRINTING_JOB: PrintingJob = {
   },
   designSetupFee: 0,
   plateCost: 25,
-  proofingCharges: 15,
-  pressHourlyRate: 120,
-  estimatedPrintRunTime: 1,
-  makeReadyTime: 0.5,
+  proofingCharges: 15,  fullPrintingCost: 1000,
   wastagePercentage: 0,
   foldingRequired: false,
   numberOfFolds: 0,

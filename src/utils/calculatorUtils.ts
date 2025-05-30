@@ -96,11 +96,10 @@ export function calculateTotalCost(job: PrintingJob): CostBreakdown {
   // Calculate pre-press setup cost
   const plateCostTotal = (job.plateCost) * job.numberOfColors * (job.isDoubleSided ? 2 : 1);
   const prePressSetupCost = (job.designSetupFee) + plateCostTotal + (job.proofingCharges);
-  
   // Calculate press cost
-  const totalPressTime = job.makeReadyTime + job.estimatedPrintRunTime;
-  const pressCost = totalPressTime * job.pressHourlyRate;
-  
+  const pressCost = job.fullPrintingCost;
+  console.log("Press Cost: ", pressCost);
+  console.log("Pre-Press Setup Cost: ", prePressSetupCost);
   // Calculate finishing cost
   let finishingCost = 0;
   
