@@ -78,7 +78,7 @@ const PaperMatrixSelector: React.FC<PaperMatrixSelectorProps> = ({
         <Table className="w-full">
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[180px] sticky left-0 z-20 bg-white shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Size</TableHead>
+              <TableHead className="w-[180px] sticky left-0 z-20 bg-background shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Size</TableHead>
               {GSM_OPTIONS.map(gsm => (
                 <TableHead key={gsm} className="text-center">
                   {gsm} GSM
@@ -89,9 +89,9 @@ const PaperMatrixSelector: React.FC<PaperMatrixSelectorProps> = ({
           <TableBody>
             {relevantSizes.map(size => (
               <TableRow key={size.id}>
-                <TableCell className="font-medium whitespace-nowrap sticky left-0 z-10 bg-white shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
+                <TableCell className="font-medium whitespace-nowrap sticky left-0 z-10 bg-background shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                   {size.name}<br />
-                  <span className="text-xs text-gray-500">
+                  <span className="text-xs text-muted-foreground">
                     {formatSheetSizeDescription(size.width, size.height, measurementUnit)}
                   </span>
                 </TableCell>
@@ -102,7 +102,7 @@ const PaperMatrixSelector: React.FC<PaperMatrixSelectorProps> = ({
                   return (
                     <TableCell 
                       key={key} 
-                      className={`text-center cursor-pointer hover:bg-gray-100 ${isHighlighted ? 'bg-blue-100 hover:bg-blue-100' : ''}`}
+                      className={`text-center cursor-pointer hover:bg-muted ${isHighlighted ? 'bg-primary/10 hover:bg-primary/20' : ''}`}
                       onClick={() => handleCellClick(gsm, size.id)}
                     >
                       {formatCurrency(matrixValues[key] || 0)}

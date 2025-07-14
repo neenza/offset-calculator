@@ -228,11 +228,11 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
 
   return (
     <div className="space-y-4 mb-16">
-      <Card className="border border-gray-200">
-        <CardHeader className="bg-gray-200">
-          <CardTitle className="text-print-blue">Job Details</CardTitle>
+      <Card className="border border-border">
+        <CardHeader className="bg-muted">
+          <CardTitle className="text-primary">Job Details</CardTitle>
         </CardHeader>
-        <CardContent className="bg-gray-100 p-4 shadow-inner">
+        <CardContent className="bg-muted/50 p-4 shadow-inner">
           <div className="space-y-4">
             <div className="space-y-2">
               <label htmlFor="jobName" className="text-sm font-medium">Job Name/Description</label>
@@ -241,7 +241,7 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
                 placeholder="Enter job name or description" 
                 value={job.jobName}
                 onChange={(e) => handleInputChange('jobName', e.target.value)}
-                className="bg-white"
+                className="bg-background border-border"
               />
             </div>
             <div className="space-y-2">
@@ -252,7 +252,7 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
                 min="1"
                 value={String(job.quantity)} // Changed
                 onChange={(e) => handleNumberInputChange('quantity', e.target.value)}
-                className="bg-white"
+                className="bg-background border-border"
               />
             </div>
           </div>
@@ -266,10 +266,10 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
       >
         {/* Printing Specifications */}
         <AccordionItem value="printing-specs" className="mb-2">
-          <AccordionTrigger className="bg-gray-200 hover:bg-gray-300 rounded-t-md px-4 py-2 text-print-blue font-medium transition-colors">
+          <AccordionTrigger className="bg-muted hover:bg-muted/80 rounded-t-md px-4 py-2 text-primary font-medium transition-colors">
             Printing Specifications
           </AccordionTrigger>
-          <AccordionContent className="bg-gray-100 p-4 border border-gray-200 rounded-b-md shadow-inner">
+          <AccordionContent className="bg-muted/50 p-4 border border-border rounded-b-md shadow-inner">
             <div className="space-y-4">
               <div className="space-y-2">
                 <label htmlFor="colors" className="text-sm font-medium">Number of Colors</label>
@@ -494,7 +494,7 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
                       </SelectItem>
                     ))}
                   </SelectContent>
-                </Select>                <p className="text-xs text-gray-500 mt-1">
+                </Select>                <p className="text-xs text-muted-foreground mt-1">
                   {job.paperMaterialType && job.paperGsm ? 
                    `${job.paperMaterialType.replace('-', ' ').replace(/\b\w/g, c => c.toUpperCase())} ${job.paperGsm}gsm` : 
                    "Select paper material and GSM, or use the matrix below for precise pricing"}
@@ -502,7 +502,7 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
               </div>
 
               {/* GSM Price Mode Selection */}
-              <div className="mt-4 pt-4 border-t border-gray-200">
+              <div className="mt-4 pt-4 border-t border-border">
                 <label className="text-sm font-medium mb-2 block">Paper Costing Mode</label>
                 <RadioGroup
                   value={job.gsmPriceMode}
@@ -523,14 +523,14 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
                     <label htmlFor="custom-pricing" className="text-sm font-medium cursor-pointer">Custom</label>
                   </div>
                 </RadioGroup>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-muted-foreground mt-1">
                   Select 'Flat' for a single cost per Kg, or 'Custom' to set cost per Kg for each GSM.
                 </p>
               </div>
 
               {/* Cost per Kg input for Flat mode */}
               {job.gsmPriceMode === 'flat' && (
-                <div className="mt-4 space-y-2 bg-gray-200 p-3 rounded-md shadow-sm">
+                <div className="mt-4 space-y-2 bg-muted p-3 rounded-md shadow-sm">
                   <label htmlFor="costPerKgFlat" className="text-sm font-medium">
                     Cost per Kg (₹)
                   </label>
@@ -541,9 +541,9 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
                     step="1" 
                     value={String(job.paperCostPerKg || '')} 
                     onChange={(e) => handleNumberInputChange('paperCostPerKg', e.target.value)} 
-                    className="bg-white"
+                    className="bg-background border-border"
                   />
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-muted-foreground">
                     Enter the paper cost per kilogram for all GSM values.
                   </p>
                 </div>
@@ -551,7 +551,7 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
 
               {/* Custom Cost per GSM inputs for Custom mode */}
               {job.gsmPriceMode === 'custom' && (
-                <div className="mt-4 space-y-2 bg-gray-200 p-3 rounded-md shadow-sm">
+                <div className="mt-4 space-y-2 bg-muted p-3 rounded-md shadow-sm">
                   <label className="text-sm font-medium">Custom Cost per Kg by GSM (₹)</label>
                   <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-x-4 gap-y-2 mt-1">
                     {GSM_OPTIONS.map(gsm => (
@@ -564,22 +564,22 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
                           step="1"
                           value={String(job.customCostMatrix?.[gsm.toString()] || '')}
                           onChange={(e) => handleCustomGsmCostChange(gsm.toString(), e.target.value)}
-                          className="bg-white text-sm h-8 w-full"
+                          className="bg-background border-border text-sm h-8 w-full"
                         />
                       </div>
                     ))}
                   </div>
-                  <p className="text-xs text-gray-500 mt-2">
+                  <p className="text-xs text-muted-foreground mt-2">
                     Enter the specific cost per kg for each GSM value.
                   </p>
                 </div>
               )}
 
               {/* Paper Matrix Toggle Button */}
-              <div className="mt-4 pt-4 border-t border-gray-200">
+              <div className="mt-4 pt-4 border-t border-border">
                 <Button 
                   variant="outline"
-                  className="w-full text-sm py-2 h-auto bg-gray-50 hover:bg-gray-100 text-print-blue border-gray-300"
+                  className="w-full text-sm py-2 h-auto bg-muted hover:bg-muted/80 text-primary border-border"
                   onClick={() => setShowPaperMatrix(!showPaperMatrix)}
                 >
                   {showPaperMatrix ? "Hide Paper Cost Matrix" : "Show Paper Cost Matrix"}
@@ -588,7 +588,7 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
 
               {/* Paper Matrix Selector - Conditionally Rendered */} 
               {showPaperMatrix && (
-                <div className="mt-4 pt-4 border-t border-gray-200">
+                <div className="mt-4 pt-4 border-t border-border">
                   <h3 className="text-sm font-medium mb-2">Paper Cost Matrix</h3>
                   <PaperMatrixSelector 
                     selectedGsm={job.paperGsm}
@@ -634,10 +634,10 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
 
         {/* Pre-Press Costs */}
         <AccordionItem value="prepress-costs" className="mb-2">
-          <AccordionTrigger className="bg-gray-200 hover:bg-gray-300 rounded-t-md px-4 py-2 text-print-blue font-medium transition-colors">
+          <AccordionTrigger className="bg-muted hover:bg-muted/80 rounded-t-md px-4 py-2 text-primary font-medium transition-colors">
             Pre-Press Costs
           </AccordionTrigger>
-          <AccordionContent className="bg-gray-100 p-4 border border-gray-200 rounded-b-md shadow-inner">
+          <AccordionContent className="bg-muted/50 p-4 border border-border rounded-b-md shadow-inner">
             <div className="space-y-4">
               <div className="space-y-2">
                 <label htmlFor="designSetupFee" className="text-sm font-medium">Design & Setup Fee (₹)</label>
@@ -678,10 +678,10 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
 
         {/* Press & Production Costs */}
         <AccordionItem value="press-costs" className="mb-2">
-          <AccordionTrigger className="bg-gray-200 hover:bg-gray-300 rounded-t-md px-4 py-2 text-print-blue font-medium transition-colors">
+          <AccordionTrigger className="bg-muted hover:bg-muted/80 rounded-t-md px-4 py-2 text-primary font-medium transition-colors">
             Press & Production Costs
           </AccordionTrigger>
-          <AccordionContent className="bg-gray-100 p-4 border border-gray-200 rounded-b-md shadow-inner">
+          <AccordionContent className="bg-muted/50 p-4 border border-border rounded-b-md shadow-inner">
             <div className="space-y-4">              <div className="space-y-2">
                 <label htmlFor="fullPrintingCost" className="text-sm font-medium">Printing Cost (₹)</label>
                 <Input 
@@ -712,10 +712,10 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
         
         {/* Finishing Options */}
         <AccordionItem value="finishing-options" className="mb-2">
-          <AccordionTrigger className="bg-gray-200 hover:bg-gray-300 rounded-t-md px-4 py-2 text-print-blue font-medium transition-colors">
+          <AccordionTrigger className="bg-muted hover:bg-muted/80 rounded-t-md px-4 py-2 text-primary font-medium transition-colors">
             Finishing Options
           </AccordionTrigger>
-          <AccordionContent className="bg-gray-100 p-4 border border-gray-200 rounded-b-md shadow-inner">
+          <AccordionContent className="bg-muted/50 p-4 border border-border rounded-b-md shadow-inner">
             <div className="space-y-4">
               <div>
                 <div className="flex items-center space-x-2">
@@ -785,7 +785,7 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
                   </SelectContent>
                 </Select>
                 {job.bindingOptionId && bindingOptions.find(b => b.id === job.bindingOptionId) && (
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-muted-foreground mt-1">
                     {bindingOptions.find(b => b.id === job.bindingOptionId)?.description}
                   </p>
                 )}
@@ -857,41 +857,41 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
         
         {/* Additional Costs */}
         <AccordionItem value="additional-costs" className="mb-2">
-          <AccordionTrigger className="bg-gray-200 hover:bg-gray-300 rounded-t-md px-4 py-2 text-print-blue font-medium transition-colors">
+          <AccordionTrigger className="bg-muted hover:bg-muted/80 rounded-t-md px-4 py-2 text-primary font-medium transition-colors">
             Additional Costs
           </AccordionTrigger>
-          <AccordionContent className="bg-gray-100 p-4 border border-gray-200 rounded-b-md shadow-inner">
+          <AccordionContent className="bg-muted/50 p-4 border border-border rounded-b-md shadow-inner">
             <div className="space-y-4">              <div className="space-y-2">
                 <label className="text-sm font-medium">Tax Rate (%)</label>                <div className="mt-2">
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-2">
                     <div 
                       onClick={() => handleInputChange('taxPercentage', 5)}
-                      className={`flex flex-col items-center justify-between rounded-md border-2 border-gray-200 bg-white p-4 hover:bg-gray-50 cursor-pointer
-                        ${job.taxPercentage === 5 ? 'border-print-blue' : ''}`}
+                      className={`flex flex-col items-center justify-between rounded-md border-2 border-border bg-card p-4 hover:bg-muted cursor-pointer
+                        ${job.taxPercentage === 5 ? 'border-primary' : ''}`}
                     >
                       <span className="text-sm font-medium">5%</span>
                     </div>
 
                     <div 
                       onClick={() => handleInputChange('taxPercentage', 12)}
-                      className={`flex flex-col items-center justify-between rounded-md border-2 border-gray-200 bg-white p-4 hover:bg-gray-50 cursor-pointer
-                        ${job.taxPercentage === 12 ? 'border-print-blue' : ''}`}
+                      className={`flex flex-col items-center justify-between rounded-md border-2 border-border bg-card p-4 hover:bg-muted cursor-pointer
+                        ${job.taxPercentage === 12 ? 'border-primary' : ''}`}
                     >
                       <span className="text-sm font-medium">12%</span>
                     </div>
 
                     <div 
                       onClick={() => handleInputChange('taxPercentage', 18)}
-                      className={`flex flex-col items-center justify-between rounded-md border-2 border-gray-200 bg-white p-4 hover:bg-gray-50 cursor-pointer
-                        ${job.taxPercentage === 18 ? 'border-print-blue' : ''}`}
+                      className={`flex flex-col items-center justify-between rounded-md border-2 border-border bg-card p-4 hover:bg-muted cursor-pointer
+                        ${job.taxPercentage === 18 ? 'border-primary' : ''}`}
                     >
                       <span className="text-sm font-medium">18%</span>
                     </div>
 
                     <div 
                       onClick={() => setIsCustomTaxSelected(true)}
-                      className={`flex flex-col items-center justify-between rounded-md border-2 border-gray-200 bg-white p-3 hover:bg-gray-50 cursor-pointer
-                        ${![5, 12, 18].includes(job.taxPercentage) ? 'border-print-blue' : ''}`}
+                      className={`flex flex-col items-center justify-between rounded-md border-2 border-border bg-card p-3 hover:bg-muted cursor-pointer
+                        ${![5, 12, 18].includes(job.taxPercentage) ? 'border-primary' : ''}`}
                     >
                       {isCustomTaxSelected ? (
                         <Input 
@@ -958,10 +958,10 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
         {/* Cost Breakdown */}
         {!hideCostBreakdown && (
           <AccordionItem value="cost-breakdown" className="mt-4">
-            <AccordionTrigger className="bg-gray-200 hover:bg-gray-300 rounded-t-md px-4 py-2 text-print-blue font-medium transition-colors">
+            <AccordionTrigger className="bg-muted hover:bg-muted/80 rounded-t-md px-4 py-2 text-primary font-medium transition-colors">
               Cost Breakdown
             </AccordionTrigger>
-            <AccordionContent className="bg-gray-100 p-4 border border-gray-200 rounded-b-md shadow-inner">
+            <AccordionContent className="bg-muted/50 p-4 border border-border rounded-b-md shadow-inner">
               <CostBreakdown job={job} />
             </AccordionContent>
           </AccordionItem>

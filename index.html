@@ -4,6 +4,23 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>offset-price-wizard</title>
+    <script>
+      // Mantine ColorSchemeScript to prevent flash and ensure proper theme detection
+      try {
+        var colorScheme = window.localStorage.getItem('mantine-color-scheme-value') || 'light';
+        var theme = window.localStorage.getItem('theme') || 'light';
+        
+        // Sync between next-themes and mantine
+        if (theme === 'system') {
+          colorScheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        } else {
+          colorScheme = theme;
+        }
+        
+        document.documentElement.setAttribute('data-mantine-color-scheme', colorScheme);
+        document.documentElement.classList.toggle('dark', colorScheme === 'dark');
+      } catch (e) {}
+    </script>
   </head>
 
   <body>

@@ -66,27 +66,30 @@ const Settings = () => {
     });
   };
   return (
-    <div className="container mx-auto px-4 py-6">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-2">
-          <Button 
-            variant="ghost" 
-            size="icon"
-            onClick={() => navigate('/')}
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <h1 className="text-2xl font-bold">Settings</h1>
-        </div>
-        <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            onClick={handleReset}
-          >
-            <RotateCcw className="h-4 w-4 mr-2" />
-            Reset to Defaults
-          </Button>
-          <Button onClick={handleSave}>
+    <div className="flex-1 bg-background overflow-auto">
+      <div className="container mx-auto px-4 py-6">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={() => navigate('/')}
+              className="text-foreground hover:text-foreground"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <h1 className="text-2xl font-bold text-foreground">Settings</h1>
+          </div>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={handleReset}
+              className="border-border text-foreground hover:bg-accent"
+            >
+              <RotateCcw className="h-4 w-4 mr-2" />
+              Reset to Defaults
+            </Button>
+            <Button onClick={handleSave}>
             <Save className="h-4 w-4 mr-2" />
             Save Changes
           </Button>
@@ -105,14 +108,14 @@ const Settings = () => {
                   <AccordionTrigger className="hover:no-underline">
                     <div className="flex items-center justify-between w-full pr-4">
                       <span>{binding.name}</span>
-                      <span className="text-sm text-gray-500">
+                      <span className="text-sm text-muted-foreground">
                         Base: ₹{binding.baseCost} | Per Unit: ₹{binding.perUnitCost}
                       </span>
                     </div>
                   </AccordionTrigger>
                   <AccordionContent>
                     <div className="space-y-4">
-                      <p className="text-sm text-gray-500 mb-2">{binding.description}</p>
+                      <p className="text-sm text-muted-foreground mb-2">{binding.description}</p>
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <label className="text-sm">Base Cost (₹):</label>
@@ -149,7 +152,7 @@ const Settings = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
-              <p className="text-sm text-gray-500">Set the cost per square meter for different lamination types.</p>
+              <p className="text-sm text-muted-foreground">Set the cost per square meter for different lamination types.</p>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
@@ -199,6 +202,7 @@ const Settings = () => {
             </div>
           </CardContent>
         </Card>
+      </div>
       </div>
     </div>
   );

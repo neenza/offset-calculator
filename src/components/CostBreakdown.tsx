@@ -64,10 +64,10 @@ const CostBreakdown: React.FC<CostBreakdownProps> = ({ job }) => {
           
           <div className="flex justify-between py-1">
             <span className="text-lg font-bold">Total Cost:</span>
-            <span className="text-lg font-bold text-print-blue">{formatCurrency(costs.grandTotal)}</span>
+            <span className="text-lg font-bold text-primary">{formatCurrency(costs.grandTotal)}</span>
           </div>
           
-          <div className="flex justify-between py-1 bg-print-gray p-2 rounded">
+          <div className="flex justify-between py-1 bg-muted p-2 rounded">
             <span className="text-sm font-medium">Cost per Unit:</span>
             <span className="font-medium">{formatCurrency(costs.costPerUnit)}</span>
           </div>

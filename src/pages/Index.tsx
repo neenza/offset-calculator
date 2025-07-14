@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import Header from '@/components/Header';
 import JobDetailsForm from '@/components/JobDetailsForm';
 import CostBreakdown from '@/components/CostBreakdown';
 import { PrintingJob } from '@/models/PrintingJob';
@@ -28,12 +27,11 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <Header />
-      <main className="flex-1 container mx-auto px-4 py-6">
+    <div className="flex-1 bg-background overflow-auto">
+      <main className="container mx-auto px-4 py-6">
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
-            <p>Loading...</p>
+            <p className="text-muted-foreground">Loading...</p>
           </div>
         ) : (
           <div className={`${isMobile ? 'flex flex-col' : 'flex flex-row gap-6'}`}>
@@ -49,8 +47,8 @@ const Index = () => {
             {/* Cost breakdown section - 40% width on desktop, hidden on mobile (shown at bottom of JobDetailsForm instead) */}
             {!isMobile && (
               <div className="w-[40%] sticky top-6 self-start">
-                <div className="bg-white rounded-lg shadow-md p-4 border border-gray-200">
-                  <h2 className="text-xl font-semibold text-print-blue mb-4">Cost Breakdown</h2>
+                <div className="bg-card rounded-lg shadow-md p-4 border border-border">
+                  <h2 className="text-xl font-semibold text-primary mb-4">Cost Breakdown</h2>
                   <CostBreakdown job={currentJob} />
                 </div>
               </div>
