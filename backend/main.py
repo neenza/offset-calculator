@@ -49,25 +49,8 @@ async def calculate_costs(job: PrintingJob, current_user = Depends(get_current_a
     """Calculate the total cost breakdown for a printing job"""
     return calculate_total_cost(job)
 
-@app.get("/utils/mm-to-inch/{mm}")
-async def convert_mm_to_inch(mm: float):
-    """Convert millimeters to inches"""
-    return {"mm": mm, "inch": mm_to_inch(mm)}
-
-@app.get("/utils/format-measurement")
-async def format_measurement_endpoint(value: float, unit: Literal["mm", "inch"]):
-    """Format a measurement based on the unit preference"""
-    return {"formatted": format_measurement(value, unit)}
-
-@app.get("/utils/format-sheet-size")
-async def format_sheet_size(width: float, height: float, unit: Literal["mm", "inch"]):
-    """Format a sheet size description based on the unit preference"""
-    return {"formatted": format_sheet_size_description(width, height, unit)}
-
-@app.get("/utils/format-currency/{amount}")
-async def format_currency_endpoint(amount: float):
-    """Format a currency amount"""
-    return {"formatted": format_currency(amount)}
+# We've removed the formatting-related endpoints
+# These functions have been moved to the frontend for better performance
 
 if __name__ == "__main__":
     import uvicorn

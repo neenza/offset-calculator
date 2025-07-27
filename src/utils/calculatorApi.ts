@@ -33,67 +33,8 @@ const calculatorApi = {
     }
   },
 
-  // Convert millimeters to inches
-  mmToInch: async (mm: number): Promise<number> => {
-    try {
-      const response = await api.get<{ mm: number; inch: number }>(`/utils/mm-to-inch/${mm}`);
-      return response.data.inch;
-    } catch (error) {
-      console.error('Error converting mm to inches:', error);
-      // Fallback to local calculation if API fails
-      return mm / 25.4;
-    }
-  },
-
-  // Format measurement based on the unit preference
-  formatMeasurement: async (value: number, unit: 'mm' | 'inch'): Promise<string> => {
-    try {
-      const response = await api.get<{ formatted: string }>('/utils/format-measurement', {
-        params: { value, unit }
-      });
-      return response.data.formatted;
-    } catch (error) {
-      console.error('Error formatting measurement:', error);
-      // Fallback to local formatting if API fails
-      if (unit === 'inch') {
-        const inches = value / 25.4;
-        return `${inches.toFixed(2)}`;
-      }
-      return `${value}mm`;
-    }
-  },
-
-  // Format sheet size description based on the unit preference
-  formatSheetSizeDescription: async (width: number, height: number, unit: 'mm' | 'inch'): Promise<string> => {
-    try {
-      const response = await api.get<{ formatted: string }>('/utils/format-sheet-size', {
-        params: { width, height, unit }
-      });
-      return response.data.formatted;
-    } catch (error) {
-      console.error('Error formatting sheet size:', error);
-      // Fallback to local formatting if API fails
-      if (unit === 'inch') {
-        return `${(width / 25.4).toFixed(2)}" × ${(height / 25.4).toFixed(2)}"`;
-      }
-      return `${width}mm × ${height}mm`;
-    }
-  },
-
-  // Format currency amount
-  formatCurrency: async (amount: number): Promise<string> => {
-    try {
-      const response = await api.get<{ formatted: string }>(`/utils/format-currency/${amount}`);
-      return response.data.formatted;
-    } catch (error) {
-      console.error('Error formatting currency:', error);
-      // Fallback to local formatting if API fails
-      return new Intl.NumberFormat('en-IN', {
-        style: 'currency',
-        currency: 'INR',
-      }).format(amount);
-    }
-  }
+  // These functions have been moved to formatters.ts and implemented locally
+  // We only need the main calculation functionality from the backend
 };
 
 export default calculatorApi;

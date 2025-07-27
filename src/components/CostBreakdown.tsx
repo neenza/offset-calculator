@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import calculatorApi from '@/utils/calculatorApi'; // Use the API service instead
+import { formatCurrency } from '@/utils/formatters'; // Import from our formatters
 import { Button } from '@/components/ui/button';
 import { Download, Share2, Loader2 } from 'lucide-react';
 import { PrintingJob, CostBreakdown as CostBreakdownType } from '@/models/PrintingJob';
@@ -22,7 +23,6 @@ interface CostBreakdownProps {
 const CostBreakdown: React.FC<CostBreakdownProps> = ({ job }) => {
   const [costs, setCosts] = useState<CostBreakdownType | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const [formattedValues, setFormattedValues] = useState<Record<string, string>>({});
   const { toast } = useToast();
   const navigate = useNavigate();
   
@@ -44,15 +44,6 @@ const CostBreakdown: React.FC<CostBreakdownProps> = ({ job }) => {
         
         const result = await calculatorApi.calculateTotalCost(job);
         setCosts(result);
-        
-        // Format all currency values
-        const formatted: Record<string, string> = {};
-        for (const key in result) {
-          if (typeof result[key] === 'number') {
-            formatted[key] = await calculatorApi.formatCurrency(result[key] as number);
-          }
-        }
-        setFormattedValues(formatted);
       } catch (error) {
         console.error('Error calculating costs:', error);
         toast({
@@ -86,7 +77,7 @@ const CostBreakdown: React.FC<CostBreakdownProps> = ({ job }) => {
     <div className="flex justify-between py-1">
       <span className="text-sm">{label}</span>
       <span className="font-medium">
-        {formattedValues[value.toString()] || `₹${value.toFixed(2)}`}
+        {formatCurrency(value)}
       </span>
     </div>
   );
@@ -133,14 +124,14 @@ const CostBreakdown: React.FC<CostBreakdownProps> = ({ job }) => {
           <div className="flex justify-between py-1">
             <span className="text-lg font-bold">Total Cost:</span>
             <span className="text-lg font-bold text-primary">
-              {formattedValues['grandTotal'] || `₹${costs.grandTotal.toFixed(2)}`}
+              {formatCurrency(costs.grandTotal)}
             </span>
           </div>
           
           <div className="flex justify-between py-1 bg-muted p-2 rounded">
             <span className="text-sm font-medium">Cost per Unit:</span>
             <span className="font-medium">
-              {formattedValues['costPerUnit'] || `₹${costs.costPerUnit.toFixed(2)}`}
+              {formatCurrency(costs.costPerUnit)}
             </span>
           </div>
         </CardContent>

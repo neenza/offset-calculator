@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { SHEET_SIZES } from "@/data/printingOptions";
 import { GSM_OPTIONS } from "@/data/paperMatrix";
 import calculatorApi from '@/utils/calculatorApi';
+import { formatCurrency, formatSheetSizeDescription } from '@/utils/formatters';
 import { useSettingsStore } from '@/utils/settingsStore';
 import { Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -29,8 +30,6 @@ const PaperMatrixSelector: React.FC<PaperMatrixSelectorProps> = ({
   onMatrixCellSelected,
 }) => {
   const [matrixValues, setMatrixValues] = useState<{[key: string]: number}>({});
-  const [formattedSheetSizes, setFormattedSheetSizes] = useState<{[key: string]: string}>({});
-  const [formattedCurrencies, setFormattedCurrencies] = useState<{[key: string]: string}>({});
   const [highlightedCell, setHighlightedCell] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const { measurementUnit } = useSettingsStore();
@@ -38,36 +37,6 @@ const PaperMatrixSelector: React.FC<PaperMatrixSelectorProps> = ({
   
   // Filter out 'custom' size for the matrix
   const relevantSizes = SHEET_SIZES.filter(size => size.id !== 'custom');
-  
-  // Format sheet size descriptions
-  useEffect(() => {
-    const formatSheetSizes = async () => {
-      if (!isLoggedIn()) {
-        return;
-      }
-      
-      const formatted: {[key: string]: string} = {};
-      
-      for (const size of relevantSizes) {
-        try {
-          formatted[size.id] = await calculatorApi.formatSheetSizeDescription(
-            size.width, 
-            size.height, 
-            measurementUnit
-          );
-        } catch (error) {
-          // Fallback to default formatting on error
-          formatted[size.id] = measurementUnit === 'inch' 
-            ? `${(size.width / 25.4).toFixed(2)}" × ${(size.height / 25.4).toFixed(2)}"` 
-            : `${size.width}mm × ${size.height}mm`;
-        }
-      }
-      
-      setFormattedSheetSizes(formatted);
-    };
-    
-    formatSheetSizes();
-  }, [relevantSizes, measurementUnit]);
   
   // Use local calculation or backend API based on authentication status
   useEffect(() => {
@@ -86,7 +55,6 @@ const PaperMatrixSelector: React.FC<PaperMatrixSelectorProps> = ({
         // For now, we're keeping the implementation simple
         
         const newValues: {[key: string]: number} = {};
-        const newFormattedCurrencies: {[key: string]: string} = {};
         
         // Simple calculation as fallback while we wait for API implementation
         for (const size of relevantSizes) {
@@ -100,21 +68,10 @@ const PaperMatrixSelector: React.FC<PaperMatrixSelectorProps> = ({
             const costValue = weightInKg * (costPerKg || 150);
             
             newValues[key] = costValue;
-            
-            // Format the currency value
-            try {
-              newFormattedCurrencies[key] = await calculatorApi.formatCurrency(costValue);
-            } catch (error) {
-              newFormattedCurrencies[key] = new Intl.NumberFormat('en-IN', {
-                style: 'currency',
-                currency: 'INR',
-              }).format(costValue);
-            }
           }
         }
         
         setMatrixValues(newValues);
-        setFormattedCurrencies(newFormattedCurrencies);
       } catch (error) {
         console.error('Error calculating matrix values:', error);
       } finally {
@@ -185,7 +142,7 @@ const PaperMatrixSelector: React.FC<PaperMatrixSelectorProps> = ({
                 <TableCell className="font-medium whitespace-nowrap sticky left-0 z-10 bg-background shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                   {size.name}<br />
                   <span className="text-xs text-muted-foreground">
-                    {formattedSheetSizes[size.id] || `${size.width}mm × ${size.height}mm`}
+                    {formatSheetSizeDescription(size.width, size.height, measurementUnit)}
                   </span>
                 </TableCell>
                 {GSM_OPTIONS.map(gsm => {
@@ -198,7 +155,7 @@ const PaperMatrixSelector: React.FC<PaperMatrixSelectorProps> = ({
                       className={`text-center cursor-pointer hover:bg-muted ${isHighlighted ? 'bg-primary/10 hover:bg-primary/20' : ''}`}
                       onClick={() => handleCellClick(gsm, size.id)}
                     >
-                      {formattedCurrencies[key] || `₹${(matrixValues[key] || 0).toFixed(2)}`}
+                      {formatCurrency(matrixValues[key] || 0)}
                     </TableCell>
                   );
                 })}
