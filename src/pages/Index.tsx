@@ -4,12 +4,15 @@ import CostBreakdown from '@/components/CostBreakdown';
 import { PrintingJob } from '@/models/PrintingJob';
 import { useJobStore } from '@/utils/jobStore';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { isLoggedIn } from '@/utils/authService';
+import { useNavigate } from 'react-router-dom';
 
 const Index = () => {
   const { currentJob, updateJob, loadJob, saveJob } = useJobStore();
   const [isLoading, setIsLoading] = useState(true);
   const isMobile = useIsMobile();
-  
+  const navigate = useNavigate();
+
   // Load saved job state when the component mounts
   useEffect(() => {
     // Load the job data from storage
@@ -21,10 +24,23 @@ const Index = () => {
       saveJob();
     };
   }, [loadJob, saveJob]);
-  
+
   const handleJobChange = (updatedJob: PrintingJob) => {
     updateJob(updatedJob);
   };
+
+  if (!isLoggedIn()) {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-background min-h-screen">
+        <button
+          className="text-lg text-primary underline hover:text-primary/80 px-6 py-4 rounded-lg shadow-md bg-card border border-border"
+          onClick={() => navigate('/profile')}
+        >
+          Please login first
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 bg-background overflow-auto">

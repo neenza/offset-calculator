@@ -9,7 +9,7 @@ from typing import Optional
 # Security settings
 SECRET_KEY = "05497ee3693ed49e3992530fc47ab37a50b9c1d4ffaba5099a7b28dc479aff11"  # In production, use environment variable
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = 15
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")

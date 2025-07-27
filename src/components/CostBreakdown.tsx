@@ -38,7 +38,7 @@ const CostBreakdown: React.FC<CostBreakdownProps> = ({ job }) => {
             description: "Please login to calculate costs",
             variant: "destructive",
           });
-          navigate('/profile');
+          // navigate('/profile');
           return;
         }
         
