@@ -9,7 +9,8 @@ import {
   Calculator,
   Sun,
   Moon,
-  Ruler
+  Ruler,
+  LogOut
 } from 'lucide-react';
 import { 
   Center, 
@@ -21,6 +22,7 @@ import {
 } from '@mantine/core';
 import { useTheme } from 'next-themes';
 import { useSettingsStore } from '@/utils/settingsStore';
+import { useAuth } from '@/utils/AuthContext';
 import styles from './AppNavbar.module.css';
 
 interface NavbarLinkProps {
@@ -64,6 +66,7 @@ export function AppNavbar({ opened: _opened }: AppNavbarProps) {
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
   const { measurementUnit, setMeasurementUnit } = useSettingsStore();
+  const { user, logout } = useAuth();
 
   // Update active state based on current path
   const currentIndex = navData.findIndex(item => item.path === location.pathname);
@@ -108,8 +111,36 @@ export function AppNavbar({ opened: _opened }: AppNavbarProps) {
         </Stack>
       </div>
       
-      {/* Bottom Controls - Measurement Unit & Theme Toggle */}
+      {/* Bottom Controls - User Info, Measurement Unit & Theme Toggle */}
       <Stack justify="center" gap={0}>
+        {/* User Info */}
+        <Tooltip
+          label={user ? `Logged in as: ${user.username}` : 'User'}
+          position="right"
+          transitionProps={{ duration: 0 }}
+        >
+          <UnstyledButton
+            className={styles.link}
+            onClick={() => navigate('/profile')}
+          >
+            <User size={20} />
+          </UnstyledButton>
+        </Tooltip>
+
+        {/* Logout */}
+        <Tooltip
+          label="Logout"
+          position="right"
+          transitionProps={{ duration: 0 }}
+        >
+          <UnstyledButton
+            className={styles.link}
+            onClick={logout}
+          >
+            <LogOut size={20} />
+          </UnstyledButton>
+        </Tooltip>
+        
         <Tooltip
           label={`Switch to ${measurementUnit === 'mm' ? 'inches' : 'millimeters'}`}
           position="right"

@@ -8,6 +8,9 @@ import { MantineProvider, createTheme } from "@mantine/core";
 import { useEffect } from "react";
 import { useTheme } from "next-themes";
 import { useSettingsStore } from "@/utils/settingsStore";
+import { initializeAuth } from "@/utils/authService";
+import { AuthProvider } from "@/utils/AuthContext";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppNavbar } from "@/components/AppNavbar";
 import Index from "./pages/Index";
 import Settings from "./pages/Settings";
@@ -41,7 +44,9 @@ const mantineTheme = createTheme({
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-      <AppContent />
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
     </ThemeProvider>
   </QueryClientProvider>
 );
@@ -53,7 +58,8 @@ const AppContent = () => {
   // Load settings on app startup
   useEffect(() => {
     loadSettings();
-    console.log("App initialized: Settings loaded");
+    initializeAuth(); // Initialize authentication system
+    console.log("App initialized: Settings loaded and auth initialized");
   }, [loadSettings]);
 
   // Determine the actual theme being used
@@ -70,20 +76,22 @@ const AppContent = () => {
     <MantineProvider theme={mantineTheme} forceColorScheme={currentTheme === 'dark' ? 'dark' : 'light'}>
       <TooltipProvider>
         <BrowserRouter>
-          <div className="flex h-screen bg-background text-foreground">
-            <AppNavbar />
-            <div className="flex-1 flex flex-col overflow-hidden bg-background">
-              <Toaster />
-              <Sonner />
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/settings" element={<Settings />} />
-                <Route path="/profile" element={<Profile />} />
-                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
+          <ProtectedRoute>
+            <div className="flex h-screen bg-background text-foreground">
+              <AppNavbar />
+              <div className="flex-1 flex flex-col overflow-hidden bg-background">
+                <Toaster />
+                <Sonner />
+                <Routes>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/settings" element={<Settings />} />
+                  <Route path="/profile" element={<Profile />} />
+                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </div>
             </div>
-          </div>
+          </ProtectedRoute>
         </BrowserRouter>
       </TooltipProvider>
     </MantineProvider>
