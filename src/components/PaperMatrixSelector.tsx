@@ -2,9 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { SHEET_SIZES } from "@/data/printingOptions";
-import { GSM_OPTIONS, calculateCostPerSheet } from "@/data/paperMatrix";
-import { formatCurrency, formatSheetSizeDescription } from "@/utils/calculatorUtils";
+import { GSM_OPTIONS } from "@/data/paperMatrix";
+import calculatorApi from '@/utils/calculatorApi';
 import { useSettingsStore } from '@/utils/settingsStore';
+import { Loader2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { isLoggedIn } from '@/utils/authService';
 
 interface PaperMatrixSelectorProps {
   selectedGsm: number | undefined;
@@ -26,34 +29,101 @@ const PaperMatrixSelector: React.FC<PaperMatrixSelectorProps> = ({
   onMatrixCellSelected,
 }) => {
   const [matrixValues, setMatrixValues] = useState<{[key: string]: number}>({});
+  const [formattedSheetSizes, setFormattedSheetSizes] = useState<{[key: string]: string}>({});
+  const [formattedCurrencies, setFormattedCurrencies] = useState<{[key: string]: string}>({});
   const [highlightedCell, setHighlightedCell] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
   const { measurementUnit } = useSettingsStore();
+  const navigate = useNavigate();
   
   // Filter out 'custom' size for the matrix
   const relevantSizes = SHEET_SIZES.filter(size => size.id !== 'custom');
   
-  // Calculate all matrix values when costPerKg changes
+  // Format sheet size descriptions
   useEffect(() => {
-    const newValues: {[key: string]: number} = {};
+    const formatSheetSizes = async () => {
+      if (!isLoggedIn()) {
+        return;
+      }
+      
+      const formatted: {[key: string]: string} = {};
+      
+      for (const size of relevantSizes) {
+        try {
+          formatted[size.id] = await calculatorApi.formatSheetSizeDescription(
+            size.width, 
+            size.height, 
+            measurementUnit
+          );
+        } catch (error) {
+          // Fallback to default formatting on error
+          formatted[size.id] = measurementUnit === 'inch' 
+            ? `${(size.width / 25.4).toFixed(2)}" × ${(size.height / 25.4).toFixed(2)}"` 
+            : `${size.width}mm × ${size.height}mm`;
+        }
+      }
+      
+      setFormattedSheetSizes(formatted);
+    };
     
-    relevantSizes.forEach(size => {
-      GSM_OPTIONS.forEach(gsm => {
-        const key = `${size.id}-${gsm}`;
-        newValues[key] = calculateCostPerSheet(
-          size.width,
-          size.height,
-          gsm,
-          costPerKg || 150,
-          gsmPriceMode,
-          paperCostIncreasePerGsm || 0.5,
-          80, // baseGsm
-          customCostMatrix
-        );
-      });
-    });
+    formatSheetSizes();
+  }, [relevantSizes, measurementUnit]);
+  
+  // Use local calculation or backend API based on authentication status
+  useEffect(() => {
+    const calculateMatrixValues = async () => {
+      setLoading(true);
+      
+      // If not logged in, use client-side calculation (implement a simpler version)
+      if (!isLoggedIn()) {
+        setLoading(false);
+        return;
+      }
+      
+      try {
+        // Implementation for authenticated API calculation would go here
+        // This would need an API endpoint to calculate the entire matrix at once
+        // For now, we're keeping the implementation simple
+        
+        const newValues: {[key: string]: number} = {};
+        const newFormattedCurrencies: {[key: string]: string} = {};
+        
+        // Simple calculation as fallback while we wait for API implementation
+        for (const size of relevantSizes) {
+          for (const gsm of GSM_OPTIONS) {
+            const key = `${size.id}-${gsm}`;
+            
+            // Simple calculation as a placeholder
+            // In a real implementation, this would call the API
+            const areaInSqm = (size.width / 1000) * (size.height / 1000);
+            const weightInKg = areaInSqm * (gsm / 1000);
+            const costValue = weightInKg * (costPerKg || 150);
+            
+            newValues[key] = costValue;
+            
+            // Format the currency value
+            try {
+              newFormattedCurrencies[key] = await calculatorApi.formatCurrency(costValue);
+            } catch (error) {
+              newFormattedCurrencies[key] = new Intl.NumberFormat('en-IN', {
+                style: 'currency',
+                currency: 'INR',
+              }).format(costValue);
+            }
+          }
+        }
+        
+        setMatrixValues(newValues);
+        setFormattedCurrencies(newFormattedCurrencies);
+      } catch (error) {
+        console.error('Error calculating matrix values:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
     
-    setMatrixValues(newValues);
-  }, [costPerKg, gsmPriceMode, paperCostIncreasePerGsm, customCostMatrix]);
+    calculateMatrixValues();
+  }, [costPerKg, gsmPriceMode, paperCostIncreasePerGsm, customCostMatrix, relevantSizes]);
     // Update highlighted cell when props change
   useEffect(() => {
     if (selectedGsm && selectedSizeId) {
@@ -72,7 +142,30 @@ const PaperMatrixSelector: React.FC<PaperMatrixSelectorProps> = ({
     onMatrixCellSelected(gsm, sizeId, costPerSheet);
     console.log(`Matrix cell clicked: ${key} (cost: ${costPerSheet})`);
   };
+    if (loading) {
     return (
+      <div className="flex items-center justify-center p-8">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-2">Loading paper matrix...</span>
+      </div>
+    );
+  }
+  
+  if (!isLoggedIn()) {
+    return (
+      <div className="p-4 text-center">
+        <p>Please login to view the paper matrix</p>
+        <button 
+          onClick={() => navigate('/profile')} 
+          className="mt-2 bg-primary text-primary-foreground px-4 py-2 rounded"
+        >
+          Login
+        </button>
+      </div>
+    );
+  }
+
+  return (
     <div className="space-y-4 mt-4">
       <div className="relative overflow-x-auto">
         <Table className="w-full">
@@ -92,7 +185,7 @@ const PaperMatrixSelector: React.FC<PaperMatrixSelectorProps> = ({
                 <TableCell className="font-medium whitespace-nowrap sticky left-0 z-10 bg-background shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                   {size.name}<br />
                   <span className="text-xs text-muted-foreground">
-                    {formatSheetSizeDescription(size.width, size.height, measurementUnit)}
+                    {formattedSheetSizes[size.id] || `${size.width}mm × ${size.height}mm`}
                   </span>
                 </TableCell>
                 {GSM_OPTIONS.map(gsm => {
@@ -105,7 +198,7 @@ const PaperMatrixSelector: React.FC<PaperMatrixSelectorProps> = ({
                       className={`text-center cursor-pointer hover:bg-muted ${isHighlighted ? 'bg-primary/10 hover:bg-primary/20' : ''}`}
                       onClick={() => handleCellClick(gsm, size.id)}
                     >
-                      {formatCurrency(matrixValues[key] || 0)}
+                      {formattedCurrencies[key] || `₹${(matrixValues[key] || 0).toFixed(2)}`}
                     </TableCell>
                   );
                 })}
