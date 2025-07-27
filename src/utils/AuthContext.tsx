@@ -1,12 +1,12 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { isLoggedIn, getCurrentUser, logout, type User } from '../utils/authService';
+import { getCurrentUser, logout, type User } from '../utils/authService';
 import { useAuthEvents } from '../utils/authEventManager';
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  logout: () => void;
+  logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
 
@@ -30,24 +30,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   const refreshUser = async () => {
-    if (isLoggedIn()) {
-      try {
-        const userData = await getCurrentUser();
-        setUser(userData);
-        setIsAuthenticated(!!userData);
-      } catch (error) {
-        console.error('Error fetching user data:', error);
-        setUser(null);
-        setIsAuthenticated(false);
-      }
-    } else {
+    try {
+      const userData = await getCurrentUser();
+      setUser(userData);
+      setIsAuthenticated(!!userData);
+    } catch (error) {
+      console.error('Error fetching user data:', error);
       setUser(null);
       setIsAuthenticated(false);
     }
   };
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     setUser(null);
     setIsAuthenticated(false);
   };

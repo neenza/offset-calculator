@@ -57,9 +57,13 @@ const AppContent = () => {
 
   // Load settings on app startup
   useEffect(() => {
-    loadSettings();
-    initializeAuth(); // Initialize authentication system
-    console.log("App initialized: Settings loaded and auth initialized");
+    const initApp = async () => {
+      loadSettings();
+      await initializeAuth(); // Initialize authentication system
+      console.log("App initialized: Settings loaded and auth initialized");
+    };
+    
+    initApp();
   }, [loadSettings]);
 
   // Determine the actual theme being used
