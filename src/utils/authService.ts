@@ -20,8 +20,13 @@ export interface LoginCredentials {
 }
 
 export interface AuthResponse {
+  success: boolean;
   message: string;
-  token_type: string;
+  user: {
+    username: string;
+    email?: string;
+    full_name?: string;
+  };
 }
 
 export interface TokenResponse {
@@ -143,7 +148,7 @@ export const login = async (credentials: LoginCredentials): Promise<boolean> => 
       { withCredentials: true }
     );
     
-    if (response.data.message === 'Login successful') {
+    if (response.data.success && response.data.message === 'Login successful') {
       authEventManager.handleLogin();
       return true;
     }

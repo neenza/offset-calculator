@@ -14,10 +14,15 @@
 ## 🛡️ Security Features Implemented
 
 ### 1. HttpOnly Cookies
-- **Access Tokens**: Stored in httpOnly cookies (15 minutes expiry)
+- **Access Tokens**: Stored in httpOnly cookies (1 minute expiry)
 - **Refresh Tokens**: Stored in httpOnly cookies (30 days expiry)
 - **JavaScript Protection**: Cookies cannot be accessed by client-side JavaScript
 - **XSS Protection**: Even if XSS occurs, tokens cannot be stolen
+
+### 2. Cookie Path Restrictions (NEW SECURITY FEATURE)
+- **Access Token**: `path="/"` - Available to all API endpoints
+- **Refresh Token**: `path="/refresh"` - ONLY sent to refresh endpoint
+- **Security Benefit**: Refresh tokens never exposed to other API calls
 
 ### 2. Secure Cookie Configuration
 ```python

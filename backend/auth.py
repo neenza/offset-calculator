@@ -11,13 +11,17 @@ import secrets
 SECRET_KEY = "05497ee3693ed49e3992530fc47ab37a50b9c1d4ffaba5099a7b28dc479aff11"  # In production, use environment variable
 REFRESH_SECRET_KEY = "a8c4e6b2d1f3a9c8e5b7d4f1a3c6e9b2d5f8a1c4e7b0d3f6a9c2e5b8d1f4a7c0"  # In production, use environment variable
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 15
+ACCESS_TOKEN_EXPIRE_MINUTES = 1  # Short-lived for security
 REFRESH_TOKEN_EXPIRE_DAYS = 30
 
 # Cookie settings for security
 COOKIE_DOMAIN = None  # Set to your domain in production
 COOKIE_SECURE = False  # Set to True in production with HTTPS
 COOKIE_SAMESITE = "lax"  # Can be "strict", "lax", or "none"
+COOKIE_PATH = "/"  # Cookie path
+
+# Server-side session storage for refresh tokens (in production, use Redis/Database)
+active_sessions = {}  # session_id -> {username, refresh_token, expires_at}
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -55,9 +59,10 @@ class UserInDB(User):
     hashed_password: str
 
 # Token models
-class Token(BaseModel):
+class LoginResponse(BaseModel):
+    success: bool
     message: str
-    token_type: str
+    user: dict
 
 class TokenResponse(BaseModel):
     success: bool
@@ -132,6 +137,55 @@ def get_refresh_token_from_cookie(request: Request) -> Optional[str]:
     """Get refresh token from httpOnly cookie"""
     return request.cookies.get("refresh_token")
 
+def create_session(username: str) -> str:
+    """Create a new session with server-side refresh token storage"""
+    session_id = secrets.token_urlsafe(32)
+    refresh_token = create_refresh_token(data={"sub": username})
+    expires_at = datetime.utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+    
+    active_sessions[session_id] = {
+        "username": username,
+        "refresh_token": refresh_token,
+        "expires_at": expires_at
+    }
+    
+    return session_id
+
+def get_session(session_id: str) -> Optional[dict]:
+    """Get session data from server-side storage"""
+    if session_id not in active_sessions:
+        return None
+    
+    session = active_sessions[session_id]
+    
+    # Check if session has expired
+    if datetime.utcnow() > session["expires_at"]:
+        del active_sessions[session_id]
+        return None
+    
+    return session
+
+def refresh_session(session_id: str) -> Optional[str]:
+    """Refresh a session and return new session ID"""
+    session = get_session(session_id)
+    if not session:
+        return None
+    
+    # Delete old session
+    del active_sessions[session_id]
+    
+    # Create new session
+    return create_session(session["username"])
+
+def delete_session(session_id: str) -> None:
+    """Delete a session (logout)"""
+    if session_id in active_sessions:
+        del active_sessions[session_id]
+
+def get_session_from_cookie(request: Request) -> Optional[str]:
+    """Get session ID from httpOnly cookie"""
+    return request.cookies.get("session_id")
+
 def verify_refresh_token(token: str) -> Optional[str]:
     try:
         payload = jwt.decode(token, REFRESH_SECRET_KEY, algorithms=[ALGORITHM])
@@ -170,7 +224,7 @@ async def get_current_active_user(current_user: User = Depends(get_current_user)
 
 # Add these routes to your main.py
 def setup_auth_routes(app):
-    @app.post("/token", response_model=Token)
+    @app.post("/token", response_model=LoginResponse)
     async def login_for_access_token(
         response: Response, 
         form_data: OAuth2PasswordRequestForm = Depends()
@@ -184,16 +238,16 @@ def setup_auth_routes(app):
             )
         
         access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-        refresh_token_expires = timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
         
         access_token = create_access_token(
             data={"sub": user.username}, expires_delta=access_token_expires
         )
-        refresh_token = create_refresh_token(
-            data={"sub": user.username}, expires_delta=refresh_token_expires
-        )
         
-        # Set secure httpOnly cookies
+        # Create server-side session (refresh token stored server-side)
+        session_id = create_session(user.username)
+        
+        # Set secure httpOnly cookies - NO TOKENS VISIBLE TO CLIENT
+        # Only access token (short-lived) in cookie
         response.set_cookie(
             key="access_token",
             value=access_token,
@@ -201,22 +255,31 @@ def setup_auth_routes(app):
             httponly=True,
             secure=COOKIE_SECURE,
             samesite=COOKIE_SAMESITE,
-            domain=COOKIE_DOMAIN
+            domain=COOKIE_DOMAIN,
+            path=COOKIE_PATH
         )
         
+        # Session ID only (refresh token stored server-side)
         response.set_cookie(
-            key="refresh_token",
-            value=refresh_token,
+            key="session_id",
+            value=session_id,
             max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
             httponly=True,
             secure=COOKIE_SECURE,
             samesite=COOKIE_SAMESITE,
-            domain=COOKIE_DOMAIN
+            domain=COOKIE_DOMAIN,
+            path=COOKIE_PATH
         )
         
+        # Return success response WITHOUT tokens
         return {
+            "success": True,
             "message": "Login successful",
-            "token_type": "bearer"
+            "user": {
+                "username": user.username,
+                "email": user.email,
+                "full_name": user.full_name
+            }
         }
     
     @app.post("/refresh", response_model=TokenResponse)
@@ -224,23 +287,25 @@ def setup_auth_routes(app):
         request: Request,
         response: Response
     ):
-        # Get refresh token from httpOnly cookie
-        refresh_token = get_refresh_token_from_cookie(request)
-        if not refresh_token:
+        # Get session ID from httpOnly cookie
+        session_id = get_session_from_cookie(request)
+        if not session_id:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Refresh token not found",
+                detail="Session not found",
                 headers={"WWW-Authenticate": "Bearer"},
             )
             
-        username = verify_refresh_token(refresh_token)
-        if not username:
+        # Get session data from server-side storage
+        session = get_session(session_id)
+        if not session:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid refresh token",
+                detail="Invalid or expired session",
                 headers={"WWW-Authenticate": "Bearer"},
             )
         
+        username = session["username"]
         user = get_user(fake_users_db, username)
         if not user:
             raise HTTPException(
@@ -250,16 +315,21 @@ def setup_auth_routes(app):
             )
         
         access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-        refresh_token_expires = timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
         
         new_access_token = create_access_token(
             data={"sub": user.username}, expires_delta=access_token_expires
         )
-        new_refresh_token = create_refresh_token(
-            data={"sub": user.username}, expires_delta=refresh_token_expires
-        )
         
-        # Set new secure httpOnly cookies
+        # Refresh the session (rotate session ID for security)
+        new_session_id = refresh_session(session_id)
+        if not new_session_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Failed to refresh session",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        
+        # Set new secure httpOnly cookies - NO TOKENS VISIBLE
         response.set_cookie(
             key="access_token",
             value=new_access_token,
@@ -267,17 +337,20 @@ def setup_auth_routes(app):
             httponly=True,
             secure=COOKIE_SECURE,
             samesite=COOKIE_SAMESITE,
-            domain=COOKIE_DOMAIN
+            domain=COOKIE_DOMAIN,
+            path=COOKIE_PATH
         )
         
+        # New session ID (refresh token stays server-side)
         response.set_cookie(
-            key="refresh_token",
-            value=new_refresh_token,
+            key="session_id",
+            value=new_session_id,
             max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
             httponly=True,
             secure=COOKIE_SECURE,
             samesite=COOKIE_SAMESITE,
-            domain=COOKIE_DOMAIN
+            domain=COOKIE_DOMAIN,
+            path=COOKIE_PATH
         )
         
         return {
@@ -286,21 +359,28 @@ def setup_auth_routes(app):
         }
     
     @app.post("/logout", response_model=TokenResponse)
-    async def logout(response: Response):
+    async def logout(request: Request, response: Response):
+        # Get session ID from cookie and delete server-side session
+        session_id = get_session_from_cookie(request)
+        if session_id:
+            delete_session(session_id)
+        
         # Clear httpOnly cookies
         response.delete_cookie(
             key="access_token",
             httponly=True,
             secure=COOKIE_SECURE,
             samesite=COOKIE_SAMESITE,
-            domain=COOKIE_DOMAIN
+            domain=COOKIE_DOMAIN,
+            path=COOKIE_PATH
         )
         response.delete_cookie(
-            key="refresh_token",
+            key="session_id",
             httponly=True,
             secure=COOKIE_SECURE,
             samesite=COOKIE_SAMESITE,
-            domain=COOKIE_DOMAIN
+            domain=COOKIE_DOMAIN,
+            path=COOKIE_PATH
         )
         
         return {
