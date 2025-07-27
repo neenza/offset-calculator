@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   Card, 
   CardContent, 
@@ -57,6 +57,9 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
   const [isHeightFocused, setIsHeightFocused] = useState(false);
   const [isCustomTaxSelected, setIsCustomTaxSelected] = useState(false);
   const [customTaxValue, setCustomTaxValue] = useState<string>("");
+  
+  // Create debounce timer reference
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const { paperTypes, bindingOptions, measurementUnit } = useSettingsStore();
 
@@ -98,6 +101,37 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
       });
     }
   };
+  
+  // State to store slider values for visual feedback
+  const [sliderVisualState, setSliderVisualState] = useState<Record<string, number>>({});
+  
+  // Debounced version of handleInputChange for sliders and other inputs that might change rapidly
+  const handleDebouncedInputChange = useCallback((field: keyof PrintingJob, value: any) => {
+    // First update the visual state immediately for responsive UI
+    setSliderVisualState(prev => ({
+      ...prev,
+      [field]: value
+    }));
+    
+    // Only update the actual value if changed
+    if (job[field] !== value) {
+      // Clear any existing timer
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+      
+      // Set a new timer
+      debounceTimerRef.current = setTimeout(() => {
+        console.log(`Debounced update ${field} to:`, value);
+        // Create a partial update with just the changed field
+        const update = { [field]: value } as Partial<PrintingJob>;
+        onJobChange({
+          ...job,
+          ...update
+        });
+      }, 300); // 300ms debounce period - adjust as needed
+    }
+  }, [job, onJobChange]);
 
   const handleNumberInputChange = (field: keyof PrintingJob, value: string) => {
     if (value.trim() === '') {
@@ -150,6 +184,25 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
       }
     }
   }, [job.paperTypeId]);
+
+  // Clean up debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, []);
+  
+  // Keep slider visual states in sync with job properties when they change externally
+  useEffect(() => {
+    setSliderVisualState(prev => ({
+      ...prev,
+      wastagePercentage: job.wastagePercentage,
+      discountPercentage: job.discountPercentage,
+      rushFeePercentage: job.rushFeePercentage
+    }));
+  }, [job.wastagePercentage, job.discountPercentage, job.rushFeePercentage]);
 
   // Effect to update display values when job properties or measurement unit change
   useEffect(() => {
@@ -697,13 +750,13 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
                 <label className="text-sm font-medium">Wastage Allowance (%)</label>
                 <div className="pt-2">
                   <Slider
-                    value={[job.wastagePercentage]}
+                    value={[sliderVisualState.wastagePercentage !== undefined ? sliderVisualState.wastagePercentage : job.wastagePercentage]}
                     min={0}
                     max={20}
                     step={1}
-                    onValueChange={(value) => handleInputChange('wastagePercentage', value[0])}
+                    onValueChange={(value) => handleDebouncedInputChange('wastagePercentage', value[0])}
                   />
-                  <div className="text-right text-sm mt-1">{job.wastagePercentage}%</div>
+                  <div className="text-right text-sm mt-1">{sliderVisualState.wastagePercentage !== undefined ? sliderVisualState.wastagePercentage : job.wastagePercentage}%</div>
                 </div>
               </div>
             </div>
@@ -928,13 +981,13 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
                 <label className="text-sm font-medium">Discount (%)</label>
                 <div className="pt-2">
                   <Slider
-                    value={[job.discountPercentage]}
+                    value={[sliderVisualState.discountPercentage !== undefined ? sliderVisualState.discountPercentage : job.discountPercentage]}
                     min={0}
                     max={50}
                     step={1}
-                    onValueChange={(value) => handleInputChange('discountPercentage', value[0])}
+                    onValueChange={(value) => handleDebouncedInputChange('discountPercentage', value[0])}
                   />
-                  <div className="text-right text-sm mt-1">{job.discountPercentage}%</div>
+                  <div className="text-right text-sm mt-1">{sliderVisualState.discountPercentage !== undefined ? sliderVisualState.discountPercentage : job.discountPercentage}%</div>
                 </div>
               </div>
               
@@ -942,13 +995,13 @@ const JobDetailsForm: React.FC<JobDetailsFormProps> = ({ job, onJobChange, hideC
                 <label className="text-sm font-medium">Rush Fee (%)</label>
                 <div className="pt-2">
                   <Slider
-                    value={[job.rushFeePercentage]}
+                    value={[sliderVisualState.rushFeePercentage !== undefined ? sliderVisualState.rushFeePercentage : job.rushFeePercentage]}
                     min={0}
                     max={100}
                     step={5}
-                    onValueChange={(value) => handleInputChange('rushFeePercentage', value[0])}
+                    onValueChange={(value) => handleDebouncedInputChange('rushFeePercentage', value[0])}
                   />
-                  <div className="text-right text-sm mt-1">{job.rushFeePercentage}%</div>
+                  <div className="text-right text-sm mt-1">{sliderVisualState.rushFeePercentage !== undefined ? sliderVisualState.rushFeePercentage : job.rushFeePercentage}%</div>
                 </div>
               </div>
             </div>
