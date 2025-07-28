@@ -6,22 +6,72 @@ from pydantic import BaseModel
 from datetime import datetime, timedelta
 from typing import Optional
 import secrets
+import redis
+import json
+import os
+from dotenv import load_dotenv
 
-# Security settings
-SECRET_KEY = "05497ee3693ed49e3992530fc47ab37a50b9c1d4ffaba5099a7b28dc479aff11"  # In production, use environment variable
-REFRESH_SECRET_KEY = "a8c4e6b2d1f3a9c8e5b7d4f1a3c6e9b2d5f8a1c4e7b0d3f6a9c2e5b8d1f4a7c0"  # In production, use environment variable
+# Load environment variables
+load_dotenv()
+
+# Security settings from environment
+SECRET_KEY = os.getenv("SECRET_KEY", "05497ee3693ed49e3992530fc47ab37a50b9c1d4ffaba5099a7b28dc479aff11")
+REFRESH_SECRET_KEY = os.getenv("REFRESH_SECRET_KEY", "a8c4e6b2d1f3a9c8e5b7d4f1a3c6e9b2d5f8a1c4e7b0d3f6a9c2e5b8d1f4a7c0")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 1  # Short-lived for security
 REFRESH_TOKEN_EXPIRE_DAYS = 30
 
-# Cookie settings for security
-COOKIE_DOMAIN = None  # Set to your domain in production
-COOKIE_SECURE = False  # Set to True in production with HTTPS
-COOKIE_SAMESITE = "lax"  # Can be "strict", "lax", or "none"
-COOKIE_PATH = "/"  # Cookie path
+# Cookie settings from environment
+COOKIE_DOMAIN = os.getenv("COOKIE_DOMAIN", None)
+COOKIE_SECURE = os.getenv("COOKIE_SECURE", "false").lower() == "true"
+COOKIE_SAMESITE = os.getenv("COOKIE_SAMESITE", "lax")
+COOKIE_PATH = "/"
 
-# Server-side session storage for refresh tokens (in production, use Redis/Database)
-active_sessions = {}  # session_id -> {username, refresh_token, expires_at}
+# Redis connection
+def create_redis_connection():
+    """Create Redis connection with error handling"""
+    try:
+        redis_url = os.getenv("REDIS_URL", "redis://localhost:6379")
+        redis_db = int(os.getenv("REDIS_DB", "0"))
+        redis_password = os.getenv("REDIS_PASSWORD", None)
+        
+        if redis_password:
+            redis_client = redis.from_url(
+                redis_url,
+                password=redis_password,
+                db=redis_db,
+                decode_responses=True,
+                socket_connect_timeout=5,
+                socket_timeout=5
+            )
+        else:
+            redis_client = redis.from_url(
+                redis_url,
+                db=redis_db,
+                decode_responses=True,
+                socket_connect_timeout=5,
+                socket_timeout=5
+            )
+        
+        # Test connection
+        redis_client.ping()
+        print("✅ Redis connection successful")
+        return redis_client
+        
+    except redis.ConnectionError as e:
+        print(f"❌ Redis connection failed: {e}")
+        print("📋 Falling back to in-memory storage")
+        return None
+    except Exception as e:
+        print(f"❌ Redis setup error: {e}")
+        print("📋 Falling back to in-memory storage")
+        return None
+
+# Initialize Redis client
+redis_client = create_redis_connection()
+
+# Fallback in-memory storage if Redis fails
+fallback_sessions = {}  # session_id -> {username, refresh_token, expires_at}
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -143,27 +193,69 @@ def create_session(username: str) -> str:
     refresh_token = create_refresh_token(data={"sub": username})
     expires_at = datetime.utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
     
-    active_sessions[session_id] = {
+    session_data = {
         "username": username,
         "refresh_token": refresh_token,
-        "expires_at": expires_at
+        "expires_at": expires_at.isoformat(),
+        "created_at": datetime.utcnow().isoformat()
     }
+    
+    try:
+        if redis_client:
+            # Store in Redis with automatic expiration
+            redis_client.setex(
+                f"session:{session_id}",
+                REFRESH_TOKEN_EXPIRE_DAYS * 24 * 3600,  # TTL in seconds
+                json.dumps(session_data)
+            )
+            print(f"✅ Session stored in Redis: {session_id}")
+        else:
+            # Fallback to in-memory storage
+            fallback_sessions[session_id] = session_data
+            print(f"📋 Session stored in memory: {session_id}")
+    except Exception as e:
+        print(f"❌ Redis error, using fallback: {e}")
+        fallback_sessions[session_id] = session_data
     
     return session_id
 
 def get_session(session_id: str) -> Optional[dict]:
     """Get session data from server-side storage"""
-    if session_id not in active_sessions:
-        return None
+    try:
+        if redis_client:
+            # Try Redis first
+            session_data = redis_client.get(f"session:{session_id}")
+            if session_data:
+                session = json.loads(session_data)
+                # Check if session has expired
+                expires_at = datetime.fromisoformat(session["expires_at"])
+                if datetime.utcnow() > expires_at:
+                    redis_client.delete(f"session:{session_id}")
+                    return None
+                return session
+        else:
+            # Use fallback storage
+            if session_id not in fallback_sessions:
+                return None
+            
+            session = fallback_sessions[session_id]
+            expires_at = datetime.fromisoformat(session["expires_at"])
+            if datetime.utcnow() > expires_at:
+                del fallback_sessions[session_id]
+                return None
+            return session
+    except Exception as e:
+        print(f"❌ Error getting session: {e}")
+        # Try fallback
+        if session_id in fallback_sessions:
+            session = fallback_sessions[session_id]
+            expires_at = datetime.fromisoformat(session["expires_at"])
+            if datetime.utcnow() > expires_at:
+                del fallback_sessions[session_id]
+                return None
+            return session
     
-    session = active_sessions[session_id]
-    
-    # Check if session has expired
-    if datetime.utcnow() > session["expires_at"]:
-        del active_sessions[session_id]
-        return None
-    
-    return session
+    return None
 
 def refresh_session(session_id: str) -> Optional[str]:
     """Refresh a session and return new session ID"""
@@ -172,15 +264,26 @@ def refresh_session(session_id: str) -> Optional[str]:
         return None
     
     # Delete old session
-    del active_sessions[session_id]
+    delete_session(session_id)
     
     # Create new session
     return create_session(session["username"])
 
 def delete_session(session_id: str) -> None:
     """Delete a session (logout)"""
-    if session_id in active_sessions:
-        del active_sessions[session_id]
+    try:
+        if redis_client:
+            redis_client.delete(f"session:{session_id}")
+            print(f"✅ Session deleted from Redis: {session_id}")
+        else:
+            if session_id in fallback_sessions:
+                del fallback_sessions[session_id]
+                print(f"📋 Session deleted from memory: {session_id}")
+    except Exception as e:
+        print(f"❌ Error deleting session: {e}")
+        # Try fallback
+        if session_id in fallback_sessions:
+            del fallback_sessions[session_id]
 
 def get_session_from_cookie(request: Request) -> Optional[str]:
     """Get session ID from httpOnly cookie"""
