@@ -1,6 +1,6 @@
 # Offset Printing Calculator Backend
 
-This FastAPI backend implements the calculation logic for the Offset Printing Calculator application.
+This FastAPI backend implements the calculation logic for the Offset Printing Calculator application with Redis-based user authentication.
 
 ## Setup Instructions
 
@@ -9,81 +9,112 @@ This FastAPI backend implements the calculation logic for the Offset Printing Ca
    pip install -r requirements.txt
    ```
 
-2. Generate a secure secret key for JWT authentication:
+2. Configure Redis connection in `.env` file:
+   ```
+   REDIS_URL=your_redis_url
+   REDIS_USERNAME=your_redis_username
+   REDIS_PASSWORD=your_redis_password
+   REDIS_DB=0
+   REDIS_SSL=true
+   ```
+
+3. Generate secure secret keys for JWT authentication:
    ```
    python generate_key.py
    ```
    
-   Update the SECRET_KEY in auth.py with the generated key.
+   Update the SECRET_KEY and REFRESH_SECRET_KEY in `.env` file with the generated keys.
 
-3. Start the server:
+4. Test the Redis connection and authentication system:
+   ```
+   python test_redis_auth.py
+   ```
+
+5. Start the server:
    ```
    python run_server.py
    ```
    
    The API will be available at http://localhost:8000
 
+## Authentication System
+
+The backend now uses Redis database for user storage instead of in-memory fake users. Features include:
+
+- **Redis-based user storage**: Users are stored in Redis with automatic initialization of default users
+- **Secure password hashing**: Using bcrypt for password security  
+- **JWT tokens with httpOnly cookies**: Access tokens are short-lived, refresh tokens stored server-side
+- **Session management**: Server-side session storage in Redis with automatic cleanup
+- **User registration**: New users can register via the `/register` endpoint
+- **Fallback support**: Falls back to in-memory storage if Redis is unavailable
+
+### Default Users
+
+The system automatically creates these default users in Redis:
+- Username: `admin`, Password: `admin123`
+- Username: `user1`, Password: `user123`
+
 ## API Endpoints
 
-- `GET /`: API home
-- `POST /token`: Get authentication token
+### Authentication
+- `POST /token`: Login and get authentication tokens
+- `POST /refresh`: Refresh access token using session
+- `POST /logout`: Logout and clear session
+- `POST /register`: Register a new user
 - `GET /users/me`: Get current user info
-- `POST /calculate`: Calculate costs for a printing job
-- `GET /utils/mm-to-inch/{mm}`: Convert mm to inches
-- `GET /utils/format-measurement`: Format a measurement
-- `GET /utils/format-sheet-size`: Format a sheet size
-- `GET /utils/format-currency/{amount}`: Format currency
+
+### Application
+- `GET /`: API home
+- `POST /calculate`: Calculate costs for a printing job (requires authentication)
 
 ## Frontend Integration
 
-To integrate with your React frontend, update your API calls to use the backend:
+Update your frontend API calls to include registration functionality:
 
 ```typescript
-// src/api/calculatorApi.ts
-import axios from 'axios';
-import { PrintingJob, CostBreakdown } from '../models/PrintingJob';
+// Register new user
+export const register = async (username: string, email: string, fullName: string, password: string) => {
+  const response = await api.post('/register', {
+    username,
+    email,
+    full_name: fullName,
+    password
+  });
+  return response.data;
+};
 
-// Create an axios instance
-const api = axios.create({
-  baseURL: 'http://localhost:8000',
-});
-
-// Add token to authenticated requests
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('auth_token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
-// Login function
+// Login remains the same but now uses Redis users
 export const login = async (username: string, password: string) => {
   const formData = new FormData();
   formData.append('username', username);
   formData.append('password', password);
   
   const response = await api.post('/token', formData);
-  localStorage.setItem('auth_token', response.data.access_token);
-  return response.data;
-};
-
-// Logout function
-export const logout = () => {
-  localStorage.removeItem('auth_token');
-};
-
-// Calculate printing costs
-export const calculateCosts = async (job: PrintingJob): Promise<CostBreakdown> => {
-  const response = await api.post('/calculate', job);
   return response.data;
 };
 ```
 
-Then update your frontend components to use these functions instead of the local calculations.
+## Database Schema
 
-## Authentication
+Users are stored in Redis with the following structure:
+```json
+{
+  "username": "string",
+  "email": "string", 
+  "full_name": "string",
+  "hashed_password": "string",
+  "disabled": false,
+  "created_at": "ISO datetime",
+  "updated_at": "ISO datetime"
+}
+```
 
-Default users for testing:
-- Username: admin, Password: admin123
-- Username: user1, Password: user123
+Sessions are stored with:
+```json
+{
+  "username": "string",
+  "refresh_token": "JWT token",
+  "expires_at": "ISO datetime",
+  "created_at": "ISO datetime"
+}
+```

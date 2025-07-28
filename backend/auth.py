@@ -122,27 +122,202 @@ class RefreshTokenRequest(BaseModel):
     # We'll get refresh token from cookie, not request body
     pass
 
+class UserRegistration(BaseModel):
+    username: str
+    email: str
+    full_name: str
+    password: str
+
 class TokenData(BaseModel):
     username: Optional[str] = None
 
-# Fake user database for demo
-# In production, use a real database
-fake_users_db = {
-    "admin": {
-        "username": "admin",
-        "full_name": "Admin User",
-        "email": "admin@example.com",
-        "hashed_password": pwd_context.hash("admin123"),
-        "disabled": False,
-    },
-    "user1": {
-        "username": "user1",
-        "full_name": "User One",
-        "email": "user1@example.com",
-        "hashed_password": pwd_context.hash("user123"),
-        "disabled": False,
+# User database functions using Redis
+def create_user_in_redis(username: str, email: str, full_name: str, hashed_password: str, disabled: bool = False) -> bool:
+    """Create a new user in Redis database"""
+    user_data = {
+        "username": username,
+        "email": email,
+        "full_name": full_name,
+        "hashed_password": hashed_password,
+        "disabled": disabled,
+        "created_at": datetime.utcnow().isoformat()
     }
-}
+    
+    try:
+        if redis_client:
+            key = f"user:{username}"
+            
+            # Check if user already exists with correct data type
+            try:
+                if redis_client.exists(key):
+                    # Try to get existing data to verify it's the right type
+                    existing_data = redis_client.get(key)
+                    if existing_data:
+                        # User already exists with valid data
+                        return False
+            except redis.ResponseError as e:
+                if "WRONGTYPE" in str(e):
+                    print(f"🧹 Cleaning up user key with wrong type: {key}")
+                    cleanup_redis_key(key)
+                else:
+                    raise e
+            
+            # Store user data in Redis
+            redis_client.set(key, json.dumps(user_data))
+            print(f"✅ User created in Redis: {username}")
+            return True
+        else:
+            print("❌ Redis not available, cannot create user")
+            return False
+    except Exception as e:
+        print(f"❌ Error creating user in Redis: {e}")
+        return False
+
+def cleanup_redis_key(key: str) -> bool:
+    """Clean up a Redis key that might have the wrong data type"""
+    try:
+        if redis_client:
+            # Check if key exists and what type it is
+            key_type = redis_client.type(key)
+            if key_type != "string" and key_type != "none":
+                print(f"🧹 Cleaning up key '{key}' with wrong type: {key_type}")
+                redis_client.delete(key)
+                return True
+        return False
+    except Exception as e:
+        print(f"❌ Error cleaning up key '{key}': {e}")
+        return False
+
+def get_user_from_redis(username: str) -> Optional[dict]:
+    """Get user data from Redis database"""
+    try:
+        if redis_client:
+            key = f"user:{username}"
+            
+            # First, try to get the data
+            try:
+                user_data = redis_client.get(key)
+                if user_data:
+                    return json.loads(user_data)
+            except redis.ResponseError as e:
+                if "WRONGTYPE" in str(e):
+                    print(f"🧹 Wrong data type for key '{key}', cleaning up...")
+                    cleanup_redis_key(key)
+                    return None
+                else:
+                    raise e
+                    
+        return None
+    except Exception as e:
+        print(f"❌ Error getting user from Redis: {e}")
+        return None
+
+def update_user_in_redis(username: str, user_data: dict) -> bool:
+    """Update user data in Redis database"""
+    try:
+        if redis_client:
+            key = f"user:{username}"
+            
+            # Check if key exists and clean up if wrong type
+            try:
+                if redis_client.exists(key):
+                    # Verify we can read it as string
+                    redis_client.get(key)
+            except redis.ResponseError as e:
+                if "WRONGTYPE" in str(e):
+                    print(f"🧹 Cleaning up user key with wrong type: {key}")
+                    cleanup_redis_key(key)
+                else:
+                    raise e
+            
+            user_data["updated_at"] = datetime.utcnow().isoformat()
+            redis_client.set(key, json.dumps(user_data))
+            print(f"✅ User updated in Redis: {username}")
+            return True
+        return False
+    except Exception as e:
+        print(f"❌ Error updating user in Redis: {e}")
+        return False
+
+def delete_user_from_redis(username: str) -> bool:
+    """Delete user from Redis database"""
+    try:
+        if redis_client:
+            result = redis_client.delete(f"user:{username}")
+            if result:
+                print(f"✅ User deleted from Redis: {username}")
+                return True
+        return False
+    except Exception as e:
+        print(f"❌ Error deleting user from Redis: {e}")
+        return False
+
+def cleanup_all_user_keys():
+    """Clean up all user keys that might have wrong data types"""
+    if not redis_client:
+        return
+        
+    try:
+        # Find all user keys
+        user_keys = redis_client.keys("user:*")
+        cleaned_count = 0
+        
+        for key in user_keys:
+            try:
+                # Try to get the value as string
+                value = redis_client.get(key)
+                if value:
+                    # Try to parse as JSON to verify it's valid
+                    json.loads(value)
+            except (redis.ResponseError, json.JSONDecodeError) as e:
+                print(f"🧹 Cleaning up invalid user key: {key}")
+                redis_client.delete(key)
+                cleaned_count += 1
+        
+        if cleaned_count > 0:
+            print(f"✅ Cleaned up {cleaned_count} invalid user keys")
+        else:
+            print("✅ All user keys are valid")
+            
+    except Exception as e:
+        print(f"❌ Error during cleanup: {e}")
+
+def initialize_default_users():
+    """Initialize default users in Redis if they don't exist"""
+    # First, clean up any invalid keys
+    cleanup_all_user_keys()
+    
+    default_users = [
+        {
+            "username": "admin",
+            "email": "admin@example.com",
+            "full_name": "Admin User",
+            "password": "admin123",
+            "disabled": False
+        },
+        {
+            "username": "user1",
+            "email": "user1@example.com",
+            "full_name": "User One", 
+            "password": "user123",
+            "disabled": False
+        }
+    ]
+    
+    for user in default_users:
+        if not get_user_from_redis(user["username"]):
+            hashed_password = pwd_context.hash(user["password"])
+            create_user_in_redis(
+                username=user["username"],
+                email=user["email"],
+                full_name=user["full_name"],
+                hashed_password=hashed_password,
+                disabled=user["disabled"]
+            )
+
+# Initialize default users when the module loads
+if redis_client:
+    initialize_default_users()
 
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
@@ -150,13 +325,16 @@ def verify_password(plain_password, hashed_password):
 def get_password_hash(password):
     return pwd_context.hash(password)
 
-def get_user(db, username: str):
-    if username in db:
-        user_dict = db[username]
-        return UserInDB(**user_dict)
+def get_user(username: str):
+    """Get user from Redis database"""
+    user_data = get_user_from_redis(username)
+    if user_data:
+        return UserInDB(**user_data)
+    return None
 
-def authenticate_user(fake_db, username: str, password: str):
-    user = get_user(fake_db, username)
+def authenticate_user(username: str, password: str):
+    """Authenticate user against Redis database"""
+    user = get_user(username)
     if not user:
         return False
     if not verify_password(password, user.hashed_password):
@@ -315,7 +493,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         token_data = TokenData(username=username)
     except JWTError:
         raise credentials_exception
-    user = get_user(fake_users_db, username=token_data.username)
+    user = get_user(username=token_data.username)
     if user is None:
         raise credentials_exception
     return user
@@ -332,7 +510,7 @@ def setup_auth_routes(app):
         response: Response, 
         form_data: OAuth2PasswordRequestForm = Depends()
     ):
-        user = authenticate_user(fake_users_db, form_data.username, form_data.password)
+        user = authenticate_user(form_data.username, form_data.password)
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -409,7 +587,7 @@ def setup_auth_routes(app):
             )
         
         username = session["username"]
-        user = get_user(fake_users_db, username)
+        user = get_user(username)
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -489,6 +667,44 @@ def setup_auth_routes(app):
         return {
             "success": True,
             "message": "Logout successful"
+        }
+    
+    @app.post("/register", response_model=LoginResponse)
+    async def register_user(user_data: UserRegistration):
+        """Register a new user"""
+        # Check if user already exists
+        if get_user_from_redis(user_data.username):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Username already exists"
+            )
+        
+        # Hash the password
+        hashed_password = get_password_hash(user_data.password)
+        
+        # Create user in Redis
+        success = create_user_in_redis(
+            username=user_data.username,
+            email=user_data.email,
+            full_name=user_data.full_name,
+            hashed_password=hashed_password,
+            disabled=False
+        )
+        
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to create user"
+            )
+        
+        return {
+            "success": True,
+            "message": "User registered successfully",
+            "user": {
+                "username": user_data.username,
+                "email": user_data.email,
+                "full_name": user_data.full_name
+            }
         }
     
     @app.get("/users/me", response_model=User)
