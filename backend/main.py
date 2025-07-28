@@ -9,7 +9,7 @@ app = FastAPI(title="Offset Printing Calculator API")
 # Configure CORS for frontend access
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],  # Specific frontend URLs
+    allow_origins=["http://localhost:5173", "http://localhost:3000", "http://192.168.1.3:5173"],  # Specific frontend URLs
     allow_credentials=True,  # Required for httpOnly cookies
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],

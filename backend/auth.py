@@ -14,6 +14,11 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
+# Debug: Print security settings being loaded
+print(f"🔍 Loading security settings:")
+print(f"   ENFORCE_SINGLE_DEVICE = {os.getenv('ENFORCE_SINGLE_DEVICE', 'not_set')}")
+print(f"   SESSION_FINGERPRINTING = {os.getenv('SESSION_FINGERPRINTING', 'not_set')}")
+
 # Security settings from environment
 SECRET_KEY = os.getenv("SECRET_KEY", "05497ee3693ed49e3992530fc47ab37a50b9c1d4ffaba5099a7b28dc479aff11")
 REFRESH_SECRET_KEY = os.getenv("REFRESH_SECRET_KEY", "a8c4e6b2d1f3a9c8e5b7d4f1a3c6e9b2d5f8a1c4e7b0d3f6a9c2e5b8d1f4a7c0")
@@ -282,10 +287,163 @@ def cleanup_all_user_keys():
     except Exception as e:
         print(f"❌ Error during cleanup: {e}")
 
+def cleanup_all_sessions():
+    """Clean up all sessions to remove fingerprint data that might cause issues"""
+    if not redis_client:
+        # Clear fallback sessions too
+        fallback_sessions.clear()
+        print("📋 Cleared all fallback sessions")
+        return
+        
+    try:
+        # Find all session keys
+        session_keys = redis_client.keys("session:*")
+        user_session_keys = redis_client.keys("user_session:*")
+        
+        # Delete all sessions
+        all_keys = session_keys + user_session_keys
+        if all_keys:
+            redis_client.delete(*all_keys)
+            print(f"🧹 Cleaned up {len(all_keys)} session keys from Redis")
+        else:
+            print("✅ No sessions to clean up")
+            
+        # Clear fallback sessions too
+        fallback_sessions.clear()
+        print("📋 Cleared all fallback sessions")
+            
+    except Exception as e:
+        print(f"❌ Error during session cleanup: {e}")
+
+# Security functions for session hijacking prevention
+def validate_session_integrity(request: Request, session_id: str, session_data: dict) -> bool:
+    """Validate session integrity to prevent token sharing"""
+    try:
+        # Get client information for fingerprinting
+        user_agent = request.headers.get("user-agent", "")
+        client_ip = request.client.host if request.client else ""
+        
+        # Check if session has stored fingerprint
+        stored_fingerprint = session_data.get("fingerprint", {})
+        
+        # Create current fingerprint
+        current_fingerprint = {
+            "user_agent": user_agent,
+            "ip": client_ip
+        }
+        
+        # If no stored fingerprint, this is the first validation - store it
+        if not stored_fingerprint:
+            print(f"🔍 First time fingerprinting for session: {session_id[:8]}...")
+            session_data["fingerprint"] = current_fingerprint
+            # Update session in Redis
+            if redis_client:
+                redis_client.setex(
+                    f"session:{session_id}",
+                    REFRESH_TOKEN_EXPIRE_DAYS * 24 * 3600,
+                    json.dumps(session_data)
+                )
+            else:
+                # Update fallback storage
+                if session_id in fallback_sessions:
+                    fallback_sessions[session_id] = session_data
+            return True
+        
+        # Validate fingerprint matches
+        if (stored_fingerprint.get("user_agent") != current_fingerprint["user_agent"] or
+            stored_fingerprint.get("ip") != current_fingerprint["ip"]):
+            print(f"⚠️ Session fingerprint mismatch for session: {session_id[:8]}...")
+            print(f"   Stored IP: {stored_fingerprint.get('ip')} vs Current IP: {client_ip}")
+            print(f"   Stored UA: {stored_fingerprint.get('user_agent', '')[:50]}... vs Current UA: {user_agent[:50]}...")
+            return False
+            
+        print(f"✅ Session fingerprint validated for session: {session_id[:8]}...")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Error validating session integrity: {e}")
+        return False
+
+def terminate_all_user_sessions(username: str) -> None:
+    """Terminate all active sessions for a user (single-device enforcement)"""
+    try:
+        if redis_client:
+            # Find all sessions for this user
+            user_sessions = redis_client.keys("session:*")
+            terminated_count = 0
+            
+            for session_key in user_sessions:
+                try:
+                    session_data = redis_client.get(session_key)
+                    if session_data:
+                        session = json.loads(session_data)
+                        if session.get("username") == username:
+                            redis_client.delete(session_key)
+                            terminated_count += 1
+                except Exception as e:
+                    print(f"Error checking session {session_key}: {e}")
+            
+            # Clear user session tracking
+            redis_client.delete(f"user_session:{username}")
+            
+            if terminated_count > 0:
+                print(f"🔄 Terminated {terminated_count} existing sessions for user: {username}")
+        else:
+            # Fallback: terminate from memory
+            sessions_to_delete = []
+            for session_id, session_data in fallback_sessions.items():
+                if session_data.get("username") == username:
+                    sessions_to_delete.append(session_id)
+            
+            for session_id in sessions_to_delete:
+                del fallback_sessions[session_id]
+                
+            if sessions_to_delete:
+                print(f"🔄 Terminated {len(sessions_to_delete)} existing sessions for user: {username}")
+                
+    except Exception as e:
+        print(f"❌ Error terminating user sessions: {e}")
+
+def is_user_session_valid(username: str, session_id: str) -> bool:
+    """Check if the session is the user's current valid session"""
+    try:
+        if redis_client:
+            current_session = redis_client.get(f"user_session:{username}")
+            return current_session == session_id
+        else:
+            # For fallback, we assume it's valid if it exists
+            return session_id in fallback_sessions
+    except Exception as e:
+        print(f"❌ Error validating user session: {e}")
+        return False
+
+def force_logout_response(response: Response):
+    """Helper function to clear all authentication cookies"""
+    response.delete_cookie(
+        key="access_token",
+        httponly=True,
+        secure=COOKIE_SECURE,
+        samesite=COOKIE_SAMESITE,
+        domain=COOKIE_DOMAIN,
+        path=COOKIE_PATH
+    )
+    response.delete_cookie(
+        key="session_id",
+        httponly=True,
+        secure=COOKIE_SECURE,
+        samesite=COOKIE_SAMESITE,
+        domain=COOKIE_DOMAIN,
+        path=COOKIE_PATH
+    )
+
 def initialize_default_users():
     """Initialize default users in Redis if they don't exist"""
     # First, clean up any invalid keys
     cleanup_all_user_keys()
+    
+    # Clean up sessions to remove any fingerprint data causing issues
+    print("🧹 Cleaning up sessions to prevent authentication issues...")
+    cleanup_all_sessions()
     
     default_users = [
         {
@@ -365,27 +523,46 @@ def get_refresh_token_from_cookie(request: Request) -> Optional[str]:
     """Get refresh token from httpOnly cookie"""
     return request.cookies.get("refresh_token")
 
-def create_session(username: str) -> str:
+def create_session(username: str, request: Request = None) -> str:
     """Create a new session with server-side refresh token storage"""
+    
+    # OPTIONAL: Enforce single device login
+    if os.getenv("ENFORCE_SINGLE_DEVICE", "false").lower() == "true":
+        terminate_all_user_sessions(username)
+    
     session_id = secrets.token_urlsafe(32)
     refresh_token = create_refresh_token(data={"sub": username})
     expires_at = datetime.utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
     
+    # Enhanced session data with fingerprinting
     session_data = {
         "username": username,
         "refresh_token": refresh_token,
         "expires_at": expires_at.isoformat(),
-        "created_at": datetime.utcnow().isoformat()
+        "created_at": datetime.utcnow().isoformat(),
+        "fingerprint": {}
     }
+    
+    # Add fingerprinting if request is available
+    if request and os.getenv("SESSION_FINGERPRINTING", "false").lower() == "true":
+        session_data["fingerprint"] = {
+            "user_agent": request.headers.get("user-agent", ""),
+            "ip": request.client.host if request.client else ""
+        }
     
     try:
         if redis_client:
-            # Store in Redis with automatic expiration
+            # Store session
             redis_client.setex(
                 f"session:{session_id}",
                 REFRESH_TOKEN_EXPIRE_DAYS * 24 * 3600,  # TTL in seconds
                 json.dumps(session_data)
             )
+            
+            # Track user's active session for single-device enforcement
+            if os.getenv("ENFORCE_SINGLE_DEVICE", "false").lower() == "true":
+                redis_client.set(f"user_session:{username}", session_id, ex=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 3600)
+            
             print(f"✅ Session stored in Redis: {session_id}")
         else:
             # Fallback to in-memory storage
@@ -435,7 +612,7 @@ def get_session(session_id: str) -> Optional[dict]:
     
     return None
 
-def refresh_session(session_id: str) -> Optional[str]:
+def refresh_session(session_id: str, request: Request = None) -> Optional[str]:
     """Refresh a session and return new session ID"""
     session = get_session(session_id)
     if not session:
@@ -444,8 +621,8 @@ def refresh_session(session_id: str) -> Optional[str]:
     # Delete old session
     delete_session(session_id)
     
-    # Create new session
-    return create_session(session["username"])
+    # Create new session with request context for fingerprinting
+    return create_session(session["username"], request)
 
 def delete_session(session_id: str) -> None:
     """Delete a session (logout)"""
@@ -507,6 +684,7 @@ async def get_current_active_user(current_user: User = Depends(get_current_user)
 def setup_auth_routes(app):
     @app.post("/token", response_model=LoginResponse)
     async def login_for_access_token(
+        request: Request,
         response: Response, 
         form_data: OAuth2PasswordRequestForm = Depends()
     ):
@@ -525,7 +703,8 @@ def setup_auth_routes(app):
         )
         
         # Create server-side session (refresh token stored server-side)
-        session_id = create_session(user.username)
+        # Pass request for fingerprinting and single-device enforcement
+        session_id = create_session(user.username, request)
         
         # Set secure httpOnly cookies - NO TOKENS VISIBLE TO CLIENT
         # Only access token (short-lived) in cookie
@@ -568,32 +747,76 @@ def setup_auth_routes(app):
         request: Request,
         response: Response
     ):
+        print(f"🔄 Refresh request received")
+        
         # Get session ID from httpOnly cookie
         session_id = get_session_from_cookie(request)
         if not session_id:
+            print(f"❌ No session ID found in cookies")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Session not found",
                 headers={"WWW-Authenticate": "Bearer"},
             )
             
+        print(f"🔍 Processing refresh for session: {session_id[:8]}...")
+        
         # Get session data from server-side storage
         session = get_session(session_id)
         if not session:
+            print(f"🚫 Invalid session attempted: {session_id[:8]}...")
+            force_logout_response(response)
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid or expired session",
+                detail="Invalid or expired session - please login again",
                 headers={"WWW-Authenticate": "Bearer"},
             )
         
         username = session["username"]
+        print(f"🔍 Session found for user: {username}")
+        
+        # Check if this is the user's current valid session (single-device enforcement)
+        single_device_enabled = os.getenv("ENFORCE_SINGLE_DEVICE", "false").lower() == "true"
+        print(f"🔒 Single device enforcement: {single_device_enabled}")
+        
+        if single_device_enabled:
+            if not is_user_session_valid(username, session_id):
+                print(f"🚫 Session invalidated by newer login: {session_id[:8]}...")
+                delete_session(session_id)
+                force_logout_response(response)
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Session invalidated by login from another device",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+        
+        # Validate session integrity (prevents token sharing)
+        fingerprinting_enabled = os.getenv("SESSION_FINGERPRINTING", "false").lower() == "true"
+        print(f"🔒 Session fingerprinting: {fingerprinting_enabled}")
+        
+        if fingerprinting_enabled:
+            if not validate_session_integrity(request, session_id, session):
+                print(f"🚫 Session integrity check failed: {session_id[:8]}...")
+                delete_session(session_id)
+                force_logout_response(response)
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Session security violation detected - please login again",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+        
         user = get_user(username)
         if not user:
+            print(f"🚫 User not found for session: {session_id[:8]}...")
+            delete_session(session_id)
+            force_logout_response(response)
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="User not found",
                 headers={"WWW-Authenticate": "Bearer"},
             )
+        
+        print(f"✅ User validation passed for: {username}")
         
         access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
         
@@ -601,14 +824,20 @@ def setup_auth_routes(app):
             data={"sub": user.username}, expires_delta=access_token_expires
         )
         
+        print(f"🔄 Refreshing session...")
+        
         # Refresh the session (rotate session ID for security)
-        new_session_id = refresh_session(session_id)
+        new_session_id = refresh_session(session_id, request)
         if not new_session_id:
+            print(f"❌ Failed to refresh session")
+            force_logout_response(response)
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Failed to refresh session",
                 headers={"WWW-Authenticate": "Bearer"},
             )
+        
+        print(f"✅ Session refreshed successfully: {new_session_id[:8]}...")
         
         # Set new secure httpOnly cookies - NO TOKENS VISIBLE
         response.set_cookie(
@@ -634,6 +863,8 @@ def setup_auth_routes(app):
             path=COOKIE_PATH
         )
         
+        print(f"✅ Refresh completed successfully for user: {username}")
+        
         return {
             "success": True,
             "message": "Token refreshed successfully"
@@ -644,25 +875,24 @@ def setup_auth_routes(app):
         # Get session ID from cookie and delete server-side session
         session_id = get_session_from_cookie(request)
         if session_id:
+            # Get session data to find username for cleanup
+            session = get_session(session_id)
+            if session:
+                username = session.get("username")
+                # If single-device enforcement is enabled, clear user session tracking
+                if (username and 
+                    os.getenv("ENFORCE_SINGLE_DEVICE", "false").lower() == "true" and 
+                    redis_client):
+                    try:
+                        redis_client.delete(f"user_session:{username}")
+                        print(f"🔄 Cleared user session tracking for: {username}")
+                    except Exception as e:
+                        print(f"❌ Error clearing user session tracking: {e}")
+            
             delete_session(session_id)
         
         # Clear httpOnly cookies
-        response.delete_cookie(
-            key="access_token",
-            httponly=True,
-            secure=COOKIE_SECURE,
-            samesite=COOKIE_SAMESITE,
-            domain=COOKIE_DOMAIN,
-            path=COOKIE_PATH
-        )
-        response.delete_cookie(
-            key="session_id",
-            httponly=True,
-            secure=COOKIE_SECURE,
-            samesite=COOKIE_SAMESITE,
-            domain=COOKIE_DOMAIN,
-            path=COOKIE_PATH
-        )
+        force_logout_response(response)
         
         return {
             "success": True,
@@ -710,3 +940,46 @@ def setup_auth_routes(app):
     @app.get("/users/me", response_model=User)
     async def read_users_me(current_user: User = Depends(get_current_active_user)):
         return current_user
+    
+    @app.get("/session/status")
+    async def get_session_status(request: Request):
+        """Get current session status and security information"""
+        session_id = get_session_from_cookie(request)
+        if not session_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="No active session",
+            )
+        
+        session = get_session(session_id)
+        if not session:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid session",
+            )
+        
+        # Get security settings
+        single_device_enabled = os.getenv("ENFORCE_SINGLE_DEVICE", "false").lower() == "true"
+        fingerprinting_enabled = os.getenv("SESSION_FINGERPRINTING", "false").lower() == "true"
+        
+        # Get session info
+        created_at = session.get("created_at")
+        expires_at = session.get("expires_at")
+        fingerprint = session.get("fingerprint", {})
+        
+        return {
+            "success": True,
+            "session_id": session_id[:8] + "...",  # Only show first 8 chars for security
+            "username": session.get("username"),
+            "created_at": created_at,
+            "expires_at": expires_at,
+            "security_features": {
+                "single_device_enforcement": single_device_enabled,
+                "session_fingerprinting": fingerprinting_enabled,
+                "fingerprint_stored": bool(fingerprint)
+            },
+            "client_info": {
+                "current_ip": request.client.host if request.client else "unknown",
+                "current_user_agent": request.headers.get("user-agent", "unknown")[:50] + "..." if len(request.headers.get("user-agent", "")) > 50 else request.headers.get("user-agent", "unknown")
+            }
+        }
