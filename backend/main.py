@@ -3,13 +3,25 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import Dict, List, Optional, Union, Literal
 import math
+import os
 
 app = FastAPI(title="Offset Printing Calculator API")
 
+# Get environment variables
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
+
 # Configure CORS for frontend access
+if ENVIRONMENT == "production":
+    # Production CORS settings
+    allowed_origins = [FRONTEND_URL] if FRONTEND_URL else ["*"]
+else:
+    # Development CORS settings
+    allowed_origins = ["http://localhost:5173", "http://localhost:3000", "http://192.168.1.3:5173"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000", "http://192.168.1.3:5173"],  # Specific frontend URLs
+    allow_origins=allowed_origins,
     allow_credentials=True,  # Required for httpOnly cookies
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],

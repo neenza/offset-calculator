@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # MongoDB configuration
-MONGODB_URL = os.getenv("MONGODB_URL", "mongodb+srv://<username>:<password>@<cluster>.mongodb.net/")
+MONGODB_URL = os.getenv("MONGODB_URI", os.getenv("MONGODB_URL", "mongodb+srv://<username>:<password>@<cluster>.mongodb.net/"))
 DATABASE_NAME = os.getenv("DATABASE_NAME", "offset_printing_db")
 
 # Global variables for database connection

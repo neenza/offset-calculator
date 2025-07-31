@@ -5,7 +5,14 @@ import locale
 import math
 
 # Set locale for currency formatting
-locale.setlocale(locale.LC_ALL, 'en_IN')
+try:
+    locale.setlocale(locale.LC_ALL, 'en_IN')
+except locale.Error:
+    try:
+        locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
+    except locale.Error:
+        # Fallback to default locale if neither is available
+        locale.setlocale(locale.LC_ALL, '')
 
 # In-memory store for settings
 # In a real app, this would be a database

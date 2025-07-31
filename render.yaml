@@ -1,0 +1,39 @@
+services:
+  - type: web
+    name: offset-calc-backend
+    env: docker
+    plan: free
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    envVars:
+      - key: MONGODB_URI
+        fromDatabase:
+          name: offset-calc-mongo
+          property: connectionString
+      - key: REDIS_URL
+        fromDatabase:
+          name: offset-calc-redis
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ALGORITHM
+        value: HS256
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "30"
+      - key: SINGLE_DEVICE_LOGIN
+        value: "true"
+      - key: SESSION_FINGERPRINTING
+        value: "true"
+      - key: ENVIRONMENT
+        value: production
+    healthCheckPath: /
+    autoDeploy: true
+
+databases:
+  - name: offset-calc-mongo
+    databaseName: offset_calc
+    user: admin
+    plan: free
+
+  - name: offset-calc-redis
+    plan: free

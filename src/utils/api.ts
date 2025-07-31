@@ -4,7 +4,7 @@ import { authEventManager } from './authEventManager';
 
 // Create a base API instance
 const api = axios.create({
-  baseURL: 'http://localhost:8000',
+  baseURL: 'https://backend-offset-calc.onrender.com/',
   headers: {
     'Content-Type': 'application/json',
   },
