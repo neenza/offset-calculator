@@ -422,7 +422,7 @@ const Database: React.FC = () => {
                 <DollarSign className="h-4 w-4 text-yellow-600" />
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Total Revenue</p>
-                  <p className="text-2xl font-bold">${analyticsData.totalRevenue.toLocaleString()}</p>
+                  <p className="text-2xl font-bold">${(analyticsData?.totalRevenue || 0).toLocaleString()}</p>
                 </div>
               </div>
             </CardContent>

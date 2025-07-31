@@ -33,10 +33,10 @@ async def get_clients(
     client_type: Optional[ClientType] = Query(None),
     current_user = Depends(get_current_active_user)
 ):
-    """Get all clients with optional filtering"""
+    """Get all clients with optional filtering - only returns clients created by current user"""
     
-    # Build query filters
-    filters = {}
+    # Build query filters - SECURITY: Only show clients created by current user
+    filters = {"created_by": current_user.username}
     
     if status:
         filters["status"] = status
@@ -64,13 +64,17 @@ async def get_client(
     client_id: str,
     current_user = Depends(get_current_active_user)
 ):
-    """Get a specific client by ID"""
+    """Get a specific client by ID - only if owned by current user"""
     
     try:
         if not ObjectId.is_valid(client_id):
             raise HTTPException(status_code=400, detail="Invalid client ID format")
         
-        client = await Client.get(ObjectId(client_id))
+        # SECURITY: Only allow access to clients created by current user
+        client = await Client.find_one({
+            "_id": ObjectId(client_id),
+            "created_by": current_user.username
+        })
         if not client:
             raise HTTPException(status_code=404, detail="Client not found")
         
@@ -88,8 +92,11 @@ async def create_client(
     """Create a new client"""
     
     try:
-        # Check if email already exists
-        existing_client = await Client.find_one({"email": client_data.email})
+        # SECURITY: Check if email already exists for this user only
+        existing_client = await Client.find_one({
+            "email": client_data.email,
+            "created_by": current_user.username
+        })
         if existing_client:
             raise HTTPException(status_code=400, detail="Email already exists")
         
@@ -114,19 +121,26 @@ async def update_client(
     client_data: ClientUpdate,
     current_user = Depends(get_current_active_user)
 ):
-    """Update an existing client"""
+    """Update an existing client - only if owned by current user"""
     
     try:
         if not ObjectId.is_valid(client_id):
             raise HTTPException(status_code=400, detail="Invalid client ID format")
         
-        client = await Client.get(ObjectId(client_id))
+        # SECURITY: Only allow updating clients created by current user
+        client = await Client.find_one({
+            "_id": ObjectId(client_id),
+            "created_by": current_user.username
+        })
         if not client:
             raise HTTPException(status_code=404, detail="Client not found")
         
-        # Check if email is being changed and already exists
+        # Check if email is being changed and already exists for this user
         if client_data.email and client_data.email != client.email:
-            existing_client = await Client.find_one({"email": client_data.email})
+            existing_client = await Client.find_one({
+                "email": client_data.email,
+                "created_by": current_user.username
+            })
             if existing_client:
                 raise HTTPException(status_code=400, detail="Email already exists")
         
@@ -153,22 +167,36 @@ async def delete_client(
     client_id: str,
     current_user = Depends(get_current_active_user)
 ):
-    """Delete a client"""
+    """Delete a client - only if owned by current user"""
     
     try:
         if not ObjectId.is_valid(client_id):
             raise HTTPException(status_code=400, detail="Invalid client ID format")
         
-        client = await Client.get(ObjectId(client_id))
+        # SECURITY: Only allow deleting clients created by current user
+        client = await Client.find_one({
+            "_id": ObjectId(client_id),
+            "created_by": current_user.username
+        })
         if not client:
             raise HTTPException(status_code=404, detail="Client not found")
         
         # Check if client has associated projects, quotes, or invoices
         client_obj_id = ObjectId(client_id)
         
-        projects_count = await Project.find({"client_id": client_obj_id}).count()
-        quotes_count = await Quote.find({"client_id": client_obj_id}).count()
-        invoices_count = await Invoice.find({"client_id": client_obj_id}).count()
+        # SECURITY: Only check for associations within this user's data
+        projects_count = await Project.find({
+            "client_id": client_obj_id,
+            "created_by": current_user.username
+        }).count()
+        quotes_count = await Quote.find({
+            "client_id": client_obj_id,
+            "created_by": current_user.username
+        }).count()
+        invoices_count = await Invoice.find({
+            "client_id": client_obj_id,
+            "created_by": current_user.username
+        }).count()
         
         if projects_count > 0 or quotes_count > 0 or invoices_count > 0:
             raise HTTPException(
@@ -190,31 +218,36 @@ async def delete_client(
 async def get_analytics_overview(
     current_user = Depends(get_current_active_user)
 ):
-    """Get overview analytics for the database"""
+    """Get overview analytics for the database - only for current user's data"""
     
     try:
-        # Get client statistics - use count() method properly
-        total_clients = await Client.count()
-        active_clients = await Client.find({"status": ClientStatus.ACTIVE}).count()
+        # SECURITY: Get client statistics only for current user
+        total_clients = await Client.find({"created_by": current_user.username}).count()
+        active_clients = await Client.find({
+            "status": ClientStatus.ACTIVE,
+            "created_by": current_user.username
+        }).count()
         
         # Get revenue statistics using simple queries instead of aggregation
-        all_clients = await Client.find().to_list()
+        all_clients = await Client.find({"created_by": current_user.username}).to_list()
         total_revenue = sum(client.total_revenue or 0 for client in all_clients)
         total_orders = sum(client.total_orders or 0 for client in all_clients)
         
         # Calculate average order value
         avg_order_value = total_revenue / total_orders if total_orders > 0 else 0
         
-        # Get project statistics
-        total_projects = await Project.count()
+        # SECURITY: Get project statistics only for current user
+        total_projects = await Project.find({"created_by": current_user.username}).count()
         active_projects = await Project.find({
-            "status": {"$in": ["quote", "in-progress"]}
+            "status": {"$in": ["quote", "in-progress"]},
+            "created_by": current_user.username
         }).count()
         
-        # Get quote statistics
-        total_quotes = await Quote.count()
+        # SECURITY: Get quote statistics only for current user
+        total_quotes = await Quote.find({"created_by": current_user.username}).count()
         pending_quotes = await Quote.find({
-            "status": {"$in": ["draft", "sent"]}
+            "status": {"$in": ["draft", "sent"]},
+            "created_by": current_user.username
         }).count()
         
         return {
