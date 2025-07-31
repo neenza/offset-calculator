@@ -198,7 +198,7 @@ async def get_analytics_overview(
         active_clients = await Client.find({"status": ClientStatus.ACTIVE}).count()
         
         # Get revenue statistics using simple queries instead of aggregation
-        all_clients = await Client.find_all().to_list()
+        all_clients = await Client.find().to_list()
         total_revenue = sum(client.total_revenue or 0 for client in all_clients)
         total_orders = sum(client.total_orders or 0 for client in all_clients)
         

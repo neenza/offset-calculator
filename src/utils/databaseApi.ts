@@ -56,27 +56,27 @@ export const clientsApi = {
     clientType?: string;
   }): Promise<ClientData[]> => {
     const response = await api.get('/api/database/clients', { params });
-    return response.data;
+    return response.data.map(transformClientData);
   },
 
   // Get a specific client by ID
   getClient: async (clientId: string): Promise<ClientData> => {
     const response = await api.get(`/api/database/clients/${clientId}`);
-    return response.data;
+    return transformClientData(response.data);
   },
 
   // Create a new client
   createClient: async (clientData: Omit<ClientData, '_id' | 'createdAt' | 'updatedAt' | 'totalOrders' | 'totalRevenue'>): Promise<ClientData> => {
     const transformedData = transformClientDataForAPI(clientData as ClientData);
     const response = await api.post('/api/database/clients', transformedData);
-    return response.data;
+    return transformClientData(response.data);
   },
 
   // Update an existing client
   updateClient: async (clientId: string, clientData: Partial<ClientData>): Promise<ClientData> => {
     const transformedData = transformClientDataForAPI(clientData as ClientData);
     const response = await api.put(`/api/database/clients/${clientId}`, transformedData);
-    return response.data;
+    return transformClientData(response.data);
   },
 
   // Delete a client
