@@ -49,6 +49,13 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { 
+  clientsApi, 
+  databaseApi, 
+  analyticsApi, 
+  type ClientData,
+  type DatabaseAnalytics 
+} from "@/utils/databaseApi";
+import { 
   Tabs, 
   TabsContent, 
   TabsList, 
@@ -82,27 +89,8 @@ import {
   Receipt
 } from 'lucide-react';
 
-// Types for our database entities
-interface Client {
-  _id?: string;
-  name: string;
-  email: string;
-  phone: string;
-  company: string;
-  address: string;
-  city: string;
-  state: string;
-  zipCode: string;
-  status: 'active' | 'inactive' | 'pending';
-  clientType: 'individual' | 'business' | 'enterprise';
-  creditLimit: number;
-  notes: string;
-  createdAt: string;
-  updatedAt: string;
-  totalOrders: number;
-  totalRevenue: number;
-  lastOrderDate?: string;
-}
+// Use types from databaseApi
+type Client = ClientData;
 
 interface Project {
   _id?: string;
@@ -140,66 +128,6 @@ interface Quote {
   updatedAt: string;
 }
 
-interface DatabaseAnalytics {
-  clients: {
-    total: number;
-    active: number;
-    inactive: number;
-  };
-  revenue: {
-    total: number;
-    total_orders: number;
-    avg_order_value: number;
-  };
-  projects: {
-    total: number;
-    active: number;
-    completed: number;
-  };
-  quotes: {
-    total: number;
-    pending: number;
-    processed: number;
-  };
-}
-
-// Mock API functions (replace with real API calls)
-const databaseApi = {
-  checkHealth: async () => {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    // Throw error to simulate disconnected state for demo
-    throw new Error('Simulated offline mode');
-  }
-};
-
-const clientsApi = {
-  getClients: async (params?: any) => {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return [];
-  },
-  createClient: async (clientData: any) => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return { ...clientData, _id: Date.now().toString() };
-  },
-  updateClient: async (id: string, clientData: any) => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return { ...clientData, _id: id };
-  },
-  deleteClient: async (id: string) => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return { message: 'Client deleted successfully' };
-  }
-};
-
-const analyticsApi = {
-  getOverview: async () => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return null;
-  }
-};
-
 const Database: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'clients' | 'projects' | 'quotes' | 'analytics'>('clients');
   const [clients, setClients] = useState<Client[]>([]);
@@ -213,7 +141,6 @@ const Database: React.FC = () => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
-  const [databaseStatus, setDatabaseStatus] = useState<'connected' | 'disconnected' | 'checking'>('checking');
   
   const { toast } = useToast();
 
@@ -235,30 +162,11 @@ const Database: React.FC = () => {
 
   // Load data on component mount
   useEffect(() => {
-    checkDatabaseHealth();
     loadClients();
     loadAnalytics();
   }, []);
 
-  const checkDatabaseHealth = async () => {
-    try {
-      setDatabaseStatus('checking');
-      await databaseApi.checkHealth();
-      setDatabaseStatus('connected');
-    } catch (error) {
-      setDatabaseStatus('disconnected');
-      toast({
-        title: "Database Connection",
-        description: "Using offline mode with mock data",
-        variant: "default"
-      });
-      loadMockData();
-    }
-  };
-
   const loadClients = async () => {
-    if (databaseStatus === 'disconnected') return;
-    
     setLoading(true);
     try {
       const clientsData = await clientsApi.getClients({
@@ -270,186 +178,37 @@ const Database: React.FC = () => {
       console.error('Error loading clients:', error);
       toast({
         title: "Error",
-        description: "Failed to load clients. Using offline mode.",
+        description: "Failed to load clients. Please check your database connection.",
         variant: "destructive"
       });
-      setDatabaseStatus('disconnected');
-      loadMockData();
     } finally {
       setLoading(false);
     }
   };
 
   const loadAnalytics = async () => {
-    if (databaseStatus === 'disconnected') return;
-    
     try {
       const analyticsData = await analyticsApi.getOverview();
       setAnalytics(analyticsData);
     } catch (error) {
       console.error('Error loading analytics:', error);
-      // Use mock analytics
-      setAnalytics({
-        clients: { total: clients.length, active: clients.filter(c => c.status === 'active').length, inactive: 0 },
-        revenue: { total: 0, total_orders: 0, avg_order_value: 0 },
-        projects: { total: 0, active: 0, completed: 0 },
-        quotes: { total: 0, pending: 0, processed: 0 }
+      toast({
+        title: "Error", 
+        description: "Failed to load analytics. Please check your database connection.",
+        variant: "destructive"
       });
     }
-  };
-
-  const loadMockData = () => {
-    // Mock clients data
-    const mockClients: Client[] = [
-      {
-        _id: '1',
-        name: 'John Smith',
-        email: 'john.smith@email.com',
-        phone: '+1-555-0101',
-        company: 'Smith & Associates',
-        address: '123 Business St',
-        city: 'New York',
-        state: 'NY',
-        zipCode: '10001',
-        status: 'active',
-        clientType: 'business',
-        creditLimit: 10000,
-        notes: 'Prefers quick turnaround projects',
-        createdAt: '2024-01-15T10:00:00Z',
-        updatedAt: '2024-01-20T15:30:00Z',
-        totalOrders: 15,
-        totalRevenue: 45000,
-        lastOrderDate: '2024-01-18T09:00:00Z'
-      },
-      {
-        _id: '2',
-        name: 'Sarah Johnson',
-        email: 'sarah@techcorp.com',
-        phone: '+1-555-0102',
-        company: 'TechCorp Solutions',
-        address: '456 Innovation Ave',
-        city: 'San Francisco',
-        state: 'CA',
-        zipCode: '94105',
-        status: 'active',
-        clientType: 'enterprise',
-        creditLimit: 50000,
-        notes: 'Large volume orders, quarterly billing',
-        createdAt: '2024-01-10T08:00:00Z',
-        updatedAt: '2024-01-22T11:15:00Z',
-        totalOrders: 8,
-        totalRevenue: 125000,
-        lastOrderDate: '2024-01-21T14:30:00Z'
-      },
-      {
-        _id: '3',
-        name: 'Mike Davis',
-        email: 'mike.davis@personal.com',
-        phone: '+1-555-0103',
-        company: '',
-        address: '789 Residential Rd',
-        city: 'Austin',
-        state: 'TX',
-        zipCode: '73301',
-        status: 'pending',
-        clientType: 'individual',
-        creditLimit: 2000,
-        notes: 'New client, requires approval for credit',
-        createdAt: '2024-01-25T16:45:00Z',
-        updatedAt: '2024-01-25T16:45:00Z',
-        totalOrders: 0,
-        totalRevenue: 0
-      }
-    ];
-
-    setClients(mockClients);
-
-    // Mock projects data
-    const mockProjects: Project[] = [
-      {
-        _id: 'p1',
-        clientId: '1',
-        clientName: 'John Smith',
-        projectName: 'Business Card Redesign',
-        description: 'New business cards with updated branding',
-        status: 'completed',
-        priority: 'medium',
-        estimatedCost: 500,
-        actualCost: 475,
-        startDate: '2024-01-15T00:00:00Z',
-        deadline: '2024-01-20T00:00:00Z',
-        completedDate: '2024-01-19T00:00:00Z',
-        createdAt: '2024-01-15T10:00:00Z',
-        updatedAt: '2024-01-19T16:00:00Z'
-      },
-      {
-        _id: 'p2',
-        clientId: '2',
-        clientName: 'Sarah Johnson',
-        projectName: 'Annual Report 2024',
-        description: 'Complete annual report with charts and graphics',
-        status: 'in-progress',
-        priority: 'high',
-        estimatedCost: 15000,
-        actualCost: 0,
-        startDate: '2024-01-20T00:00:00Z',
-        deadline: '2024-02-15T00:00:00Z',
-        createdAt: '2024-01-20T09:00:00Z',
-        updatedAt: '2024-01-25T14:30:00Z'
-      }
-    ];
-
-    setProjects(mockProjects);
-
-    // Mock quotes data
-    const mockQuotes: Quote[] = [
-      {
-        _id: 'q1',
-        clientId: '3',
-        quoteNumber: 'QT-2024-001',
-        items: [
-          { description: 'Business Cards (1000 qty)', quantity: 1000, unitPrice: 0.15, total: 150 },
-          { description: 'Setup Fee', quantity: 1, unitPrice: 50, total: 50 }
-        ],
-        subtotal: 200,
-        tax: 16,
-        total: 216,
-        status: 'sent',
-        validUntil: '2024-02-25T23:59:59Z',
-        createdAt: '2024-01-25T17:00:00Z',
-        updatedAt: '2024-01-25T17:00:00Z'
-      }
-    ];
-
-    setQuotes(mockQuotes);
   };
 
   const createClient = async (clientData: Partial<Client>) => {
     setLoading(true);
     try {
-      if (databaseStatus === 'connected') {
-        const newClient = await clientsApi.createClient(clientData);
-        setClients(prev => [...prev, newClient as Client]);
-        toast({
-          title: "Success",
-          description: "Client created successfully",
-        });
-      } else {
-        // Mock creation for offline mode
-        const newClient: Client = {
-          ...clientData as Client,
-          _id: Date.now().toString(),
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          totalOrders: 0,
-          totalRevenue: 0
-        };
-        setClients(prev => [...prev, newClient]);
-        toast({
-          title: "Success",
-          description: "Client created successfully (offline mode)",
-        });
-      }
+      const newClient = await clientsApi.createClient(clientData as any);
+      setClients(prev => [...prev, newClient as Client]);
+      toast({
+        title: "Success",
+        description: "Client created successfully",
+      });
       setIsCreateDialogOpen(false);
       resetForm();
     } catch (error) {
@@ -466,19 +225,10 @@ const Database: React.FC = () => {
   const updateClient = async (clientId: string, clientData: Partial<Client>) => {
     setLoading(true);
     try {
-      if (databaseStatus === 'connected') {
-        const updatedClient = await clientsApi.updateClient(clientId, clientData);
-        setClients(prev => prev.map(client => 
-          client._id === clientId ? updatedClient as Client : client
-        ));
-      } else {
-        // Mock update for offline mode
-        setClients(prev => prev.map(client => 
-          client._id === clientId 
-            ? { ...client, ...clientData, updatedAt: new Date().toISOString() }
-            : client
-        ));
-      }
+      const updatedClient = await clientsApi.updateClient(clientId, clientData);
+      setClients(prev => prev.map(client => 
+        client._id === clientId ? updatedClient as Client : client
+      ));
       
       toast({
         title: "Success",
@@ -501,10 +251,7 @@ const Database: React.FC = () => {
   const deleteClient = async (clientId: string) => {
     setLoading(true);
     try {
-      if (databaseStatus === 'connected') {
-        await clientsApi.deleteClient(clientId);
-      }
-      
+      await clientsApi.deleteClient(clientId);
       setClients(prev => prev.filter(client => client._id !== clientId));
       toast({
         title: "Success",
@@ -601,13 +348,13 @@ const Database: React.FC = () => {
       };
     }
     
-    // Fallback calculations from local data
+    // Return zero values if no analytics data available
     return {
-      totalClients: clients.length,
-      activeClients: clients.filter(c => c.status === 'active').length,
-      totalRevenue: clients.reduce((sum, c) => sum + c.totalRevenue, 0),
-      totalOrders: clients.reduce((sum, c) => sum + c.totalOrders, 0),
-      avgOrderValue: clients.reduce((sum, c) => sum + c.totalRevenue, 0) / Math.max(clients.reduce((sum, c) => sum + c.totalOrders, 0), 1)
+      totalClients: 0,
+      activeClients: 0,
+      totalRevenue: 0,
+      totalOrders: 0,
+      avgOrderValue: 0
     };
   };
 

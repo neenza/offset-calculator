@@ -2,10 +2,11 @@
 MongoDB models using Beanie ODM for the offset printing calculator
 """
 from datetime import datetime
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Annotated
 from enum import Enum
 from pydantic import BaseModel, Field, EmailStr, ConfigDict
-from beanie import Document, PydanticObjectId
+from beanie import Document, Indexed, PydanticObjectId
+from bson import ObjectId
 
 # Enums for structured data
 class ClientStatus(str, Enum):
@@ -100,7 +101,7 @@ class ProjectSpecification(BaseModel):
 
 # Main Documents
 class Client(Document):
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    model_config = ConfigDict(arbitrary_types_allowed=True, validate_assignment=True)
     
     # Personal Information
     name: str
@@ -144,7 +145,7 @@ class Client(Document):
         ]
 
 class Project(Document):
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    model_config = ConfigDict(arbitrary_types_allowed=True, validate_assignment=True)
     
     # Basic Information
     client_id: PydanticObjectId
