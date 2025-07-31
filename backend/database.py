@@ -33,7 +33,7 @@ async def connect_to_mongo():
         print("✅ Connected to MongoDB successfully")
         
         # Import models for Beanie initialization
-        from .database_models import Client, Project, Quote, Invoice, ClientInteraction
+        from database_models import Client, Project, Quote, Invoice, ClientInteraction
         
         # Initialize Beanie with the models
         await init_beanie(

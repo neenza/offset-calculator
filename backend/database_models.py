@@ -4,9 +4,8 @@ MongoDB models using Beanie ODM for the offset printing calculator
 from datetime import datetime
 from typing import List, Optional, Dict, Any
 from enum import Enum
-from pydantic import BaseModel, Field, EmailStr
-from beanie import Document, Indexed
-from bson import ObjectId
+from pydantic import BaseModel, Field, EmailStr, ConfigDict
+from beanie import Document, PydanticObjectId
 
 # Enums for structured data
 class ClientStatus(str, Enum):
@@ -63,6 +62,8 @@ class InteractionType(str, Enum):
 
 # Embedded documents
 class Address(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    
     street: str = ""
     city: str = ""
     state: str = ""
@@ -70,6 +71,8 @@ class Address(BaseModel):
     country: str = "USA"
 
 class QuoteItem(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    
     description: str
     quantity: int = 1
     unit_price: float = 0.0
@@ -77,12 +80,16 @@ class QuoteItem(BaseModel):
     specifications: Optional[Dict[str, Any]] = None
 
 class PaymentTerm(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    
     payment_method: PaymentMethod = PaymentMethod.CHECK
     due_days: int = 30
     discount_percentage: float = 0.0
     discount_days: int = 0
 
 class ProjectSpecification(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    
     paper_type: Optional[str] = None
     paper_size: Optional[str] = None
     quantity: Optional[int] = None
@@ -93,9 +100,11 @@ class ProjectSpecification(BaseModel):
 
 # Main Documents
 class Client(Document):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    
     # Personal Information
-    name: Indexed(str)
-    email: Indexed(EmailStr)
+    name: str
+    email: EmailStr
     phone: str = ""
     company: str = ""
     
@@ -135,10 +144,12 @@ class Client(Document):
         ]
 
 class Project(Document):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    
     # Basic Information
-    client_id: ObjectId
+    client_id: PydanticObjectId
     client_name: str
-    project_name: Indexed(str)
+    project_name: str
     description: str = ""
     
     # Project Details
@@ -180,10 +191,12 @@ class Project(Document):
         ]
 
 class Quote(Document):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    
     # Basic Information
-    quote_number: Indexed(str)
-    client_id: ObjectId
-    project_id: Optional[ObjectId] = None
+    quote_number: str
+    client_id: PydanticObjectId
+    project_id: Optional[PydanticObjectId] = None
     client_name: str
     
     # Quote Details
@@ -222,11 +235,13 @@ class Quote(Document):
         ]
 
 class Invoice(Document):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    
     # Basic Information
-    invoice_number: Indexed(str)
-    client_id: ObjectId
-    quote_id: Optional[ObjectId] = None
-    project_id: Optional[ObjectId] = None
+    invoice_number: str
+    client_id: PydanticObjectId
+    quote_id: Optional[PydanticObjectId] = None
+    project_id: Optional[PydanticObjectId] = None
     client_name: str
     
     # Invoice Details
@@ -270,8 +285,10 @@ class Invoice(Document):
         ]
 
 class ClientInteraction(Document):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    
     # Basic Information
-    client_id: ObjectId
+    client_id: PydanticObjectId
     client_name: str
     interaction_type: InteractionType
     
@@ -283,9 +300,9 @@ class ClientInteraction(Document):
     follow_up_date: Optional[datetime] = None
     
     # Associated Records
-    project_id: Optional[ObjectId] = None
-    quote_id: Optional[ObjectId] = None
-    invoice_id: Optional[ObjectId] = None
+    project_id: Optional[PydanticObjectId] = None
+    quote_id: Optional[PydanticObjectId] = None
+    invoice_id: Optional[PydanticObjectId] = None
     
     # Files and Attachments
     attachments: List[str] = []
@@ -307,6 +324,8 @@ class ClientInteraction(Document):
 
 # Settings and Configuration
 class AppSettings(Document):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    
     # Business Information
     business_name: str = "Offset Printing Company"
     business_address: Address = Address()
@@ -343,6 +362,8 @@ class AppSettings(Document):
 
 # Request/Response Models for API
 class ClientCreate(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    
     name: str
     email: EmailStr
     phone: str = ""
@@ -356,6 +377,8 @@ class ClientCreate(BaseModel):
     referral_source: str = ""
 
 class ClientUpdate(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    
     name: Optional[str] = None
     email: Optional[EmailStr] = None
     phone: Optional[str] = None
@@ -369,6 +392,8 @@ class ClientUpdate(BaseModel):
     referral_source: Optional[str] = None
 
 class ClientResponse(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    
     id: str
     name: str
     email: str
