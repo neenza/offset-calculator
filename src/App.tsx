@@ -16,6 +16,7 @@ import Index from "./pages/Index";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import Profile from "./pages/Profile";
+import Database from "./pages/database";
 
 // Import Mantine styles
 import '@mantine/core/styles.css';
@@ -88,6 +89,7 @@ const AppContent = () => {
                 <Sonner />
                 <Routes>
                   <Route path="/" element={<Index />} />
+                  <Route path="/database" element={<Database />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/profile" element={<Profile />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

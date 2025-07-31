@@ -23,6 +23,40 @@ dist-ssr
 *.sln
 *.sw?
 
-#fastapi files
+# Python files
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+.Python
+build/
+develop-eggs/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Environment files
+*.env
+*.env.local
+*.env.development
+*.env.test
+*.env.production
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+backend/.env
+
+# Keep example env files
+!.env.example
+!backend/.env.example

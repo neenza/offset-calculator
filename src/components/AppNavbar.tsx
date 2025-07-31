@@ -10,7 +10,8 @@ import {
   Sun,
   Moon,
   Ruler,
-  LogOut
+  LogOut,
+  Database
 } from 'lucide-react';
 import { 
   Center, 
@@ -51,7 +52,7 @@ const navData = [
   { icon: Home, label: 'Home', path: '/' },
   { icon: Calculator, label: 'Calculator', path: '/' },
   { icon: BarChart3, label: 'Analytics', path: '/analytics' },
-  { icon: FileText, label: 'Reports', path: '/reports' },
+  { icon: Database, label: 'Database', path: '/database' },
   { icon: User, label: 'Profile', path: '/profile' },
   { icon: Settings, label: 'Settings', path: '/settings' },
 ];
