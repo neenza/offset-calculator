@@ -193,34 +193,26 @@ async def get_analytics_overview(
     """Get overview analytics for the database"""
     
     try:
-        # Get client statistics
-        total_clients = await Client.find().count()
+        # Get client statistics - use count() method properly
+        total_clients = await Client.count()
         active_clients = await Client.find({"status": ClientStatus.ACTIVE}).count()
         
-        # Get revenue statistics
-        pipeline = [
-            {"$group": {
-                "_id": None,
-                "total_revenue": {"$sum": "$total_revenue"},
-                "total_orders": {"$sum": "$total_orders"}
-            }}
-        ]
-        
-        revenue_stats = await Client.aggregate(pipeline).to_list(1)
-        total_revenue = revenue_stats[0]["total_revenue"] if revenue_stats else 0
-        total_orders = revenue_stats[0]["total_orders"] if revenue_stats else 0
+        # Get revenue statistics using simple queries instead of aggregation
+        all_clients = await Client.find_all().to_list()
+        total_revenue = sum(client.total_revenue or 0 for client in all_clients)
+        total_orders = sum(client.total_orders or 0 for client in all_clients)
         
         # Calculate average order value
         avg_order_value = total_revenue / total_orders if total_orders > 0 else 0
         
         # Get project statistics
-        total_projects = await Project.find().count()
+        total_projects = await Project.count()
         active_projects = await Project.find({
             "status": {"$in": ["quote", "in-progress"]}
         }).count()
         
         # Get quote statistics
-        total_quotes = await Quote.find().count()
+        total_quotes = await Quote.count()
         pending_quotes = await Quote.find({
             "status": {"$in": ["draft", "sent"]}
         }).count()
@@ -313,7 +305,7 @@ async def database_health():
     
     try:
         # Test database connection
-        clients_count = await Client.find().count()
+        clients_count = await Client.count()
         
         return {
             "status": "healthy",

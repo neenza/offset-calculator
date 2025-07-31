@@ -67,13 +67,15 @@ export const clientsApi = {
 
   // Create a new client
   createClient: async (clientData: Omit<ClientData, '_id' | 'createdAt' | 'updatedAt' | 'totalOrders' | 'totalRevenue'>): Promise<ClientData> => {
-    const response = await api.post('/api/database/clients', clientData);
+    const transformedData = transformClientDataForAPI(clientData as ClientData);
+    const response = await api.post('/api/database/clients', transformedData);
     return response.data;
   },
 
   // Update an existing client
   updateClient: async (clientId: string, clientData: Partial<ClientData>): Promise<ClientData> => {
-    const response = await api.put(`/api/database/clients/${clientId}`, clientData);
+    const transformedData = transformClientDataForAPI(clientData as ClientData);
+    const response = await api.put(`/api/database/clients/${clientId}`, transformedData);
     return response.data;
   },
 
