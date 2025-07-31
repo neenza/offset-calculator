@@ -21,12 +21,12 @@ else:
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins + ["https://offset-calculator-eight.vercel.app"],  # Always allow Vercel app
+    allow_origins=allowed_origins + ["https://offset-calculator-eight.vercel.app"],
     allow_credentials=True,  # Required for httpOnly cookies
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
-    expose_headers=["*"],  # Expose headers to the client
-    max_age=600,  # Cache preflight requests for 10 minutes
+    expose_headers=["Set-Cookie"],  # Important: Expose Set-Cookie header
+    max_age=600,
 )
 
 # Import the models and calculation utilities

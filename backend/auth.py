@@ -29,7 +29,7 @@ REFRESH_TOKEN_EXPIRE_DAYS = 30
 # Cookie settings from environment
 COOKIE_DOMAIN = os.getenv("COOKIE_DOMAIN", None)
 COOKIE_SECURE = os.getenv("COOKIE_SECURE", "false").lower() == "true"
-COOKIE_SAMESITE = os.getenv("COOKIE_SAMESITE", "lax")
+COOKIE_SAMESITE = os.getenv("COOKIE_SAMESITE", "none")
 COOKIE_PATH = "/"
 
 # Redis connection
