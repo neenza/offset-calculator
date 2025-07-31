@@ -4,7 +4,7 @@ import axios from 'axios';
 import { authEventManager } from './authEventManager';
 
 // Base URL for the API - adjust if needed
-const API_URL = 'https://backend-offset-calc.onrender.com/';
+const API_URL = 'https://backend-offset-calc.onrender.com';
 
 // Type definitions for authentication
 export interface User {
