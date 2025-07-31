@@ -9,7 +9,7 @@ app = FastAPI(title="Offset Printing Calculator API")
 
 # Get environment variables
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "https://offset-calculator-eight.vercel.app")
 
 # Configure CORS for frontend access
 if ENVIRONMENT == "production":
@@ -17,14 +17,16 @@ if ENVIRONMENT == "production":
     allowed_origins = [FRONTEND_URL] if FRONTEND_URL else ["*"]
 else:
     # Development CORS settings
-    allowed_origins = ["http://localhost:5173", "http://localhost:3000", "http://192.168.1.3:5173"]
+    allowed_origins = ["http://localhost:5173", "http://localhost:3000", "http://192.168.1.3:5173", "https://offset-calculator-eight.vercel.app"]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,
+    allow_origins=allowed_origins + ["https://offset-calculator-eight.vercel.app"],  # Always allow Vercel app
     allow_credentials=True,  # Required for httpOnly cookies
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
+    expose_headers=["*"],  # Expose headers to the client
+    max_age=600,  # Cache preflight requests for 10 minutes
 )
 
 # Import the models and calculation utilities
